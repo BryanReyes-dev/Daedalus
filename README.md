@@ -110,7 +110,7 @@ The current `sysinfo` dependency requires Rust 1.95 or newer.
 | Daedalus Desktop | Separate private desktop experience, Electron shell, visual workflow UI, and application integrations |
 | Daedalus Marketplace | Separate private storefront, creator services, artifact distribution, commercial entitlements, payments, and payouts |
 
-The repository is currently private and remains under its checked-in proprietary license. The intended future public-core direction does not change current access or licensing. See [Licensing and Release Status](#licensing-and-release-status).
+The repository is publicly visible, but it remains under its checked-in proprietary license. Public visibility does not change the licensing terms. See [Licensing and Release Status](#licensing-and-release-status).
 
 ## Architecture
 
