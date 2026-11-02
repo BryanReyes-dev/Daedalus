@@ -190,7 +190,9 @@ pub struct SystemSnapshot {
     pub memory: Option<MemoryInfo>,
     pub product: Option<ProductInfo>,
     pub motherboard: Option<MotherboardInfo>,
-    pub storage_devices: FixedVec<StorageDeviceInfo, MAX_STORAGE_DEVICES>,
+    /// None means the platform storage API could not be queried.
+    /// Some(empty) means the query succeeded but returned no entries.
+    pub storage_devices: Option<FixedVec<StorageDeviceInfo, MAX_STORAGE_DEVICES>>,
     /// None means unsupported; Some(empty) means queried with no devices found.
     pub gpus: Option<FixedVec<GpuInfo, MAX_GPU_DEVICES>>,
     /// None means unsupported; Some(empty) means queried with no sensors found.
