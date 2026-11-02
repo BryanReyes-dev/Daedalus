@@ -7,7 +7,7 @@ use sysinfo::{CpuRefreshKind, Error as SysinfoError, MemoryRefreshKind, System};
 /// Host operating-system provider backed by `sysinfo`.
 ///
 /// A provider instance retains its `System` object between discovery calls.
-/// It enumerates CPU metadata once and refreshes memory on each discovery.
+/// It enumerates CPU metadata once and refreshes RAM for each discovery.
 /// It does not enumerate processes, users, disks, networks, or component sensors.
 pub struct SysinfoProvider {
     system: Option<System>,
@@ -41,16 +41,19 @@ impl SystemInfoProvider for SysinfoProvider {
 
         // Memory availability changes during runtime; CPU identity and topology
         // are retained from the initial enumeration.
-        system.refresh_memory();
+        system.refresh_memory_specifics(MemoryRefreshKind::nothing().with_ram());
 
         let architecture_name = System::cpu_arch();
         let architecture = Architecture::from_name(&architecture_name);
 
+        // These OS metadata queries are optional on some targets supported by
+        // sysinfo. Failure to expose a label should produce a partial snapshot,
+        // not discard processor and memory information.
         let platform = PlatformInfo {
             os_family: current_os_family(),
-            os_name: optional_sysinfo_text(System::name())?,
-            os_version: optional_sysinfo_text(System::os_version())?,
-            kernel_version: optional_sysinfo_text(System::kernel_version())?,
+            os_name: optional_sysinfo_text(System::name()),
+            os_version: optional_sysinfo_text(System::os_version()),
+            kernel_version: optional_sysinfo_text(System::kernel_version()),
             architecture,
             architecture_name: non_empty_text(&architecture_name),
         };
@@ -101,15 +104,22 @@ fn map_sysinfo_error(error: SysinfoError) -> DiscoveryError {
 
 fn optional_sysinfo_text(
     result: Result<String, SysinfoError>,
-) -> Result<Option<FixedText<TEXT_CAPACITY>>, DiscoveryError> {
+) -> Option<FixedText<TEXT_CAPACITY>> {
     match result {
-        Ok(value) => Ok(non_empty_text(&value)),
-        Err(SysinfoError::Unsupported) => Err(DiscoveryError::UnsupportedPlatform),
-        Err(SysinfoError::Io(_) | SysinfoError::Other(_)) => Ok(None),
+        Ok(value) => non_empty_text(&value),
+        Err(SysinfoError::Unsupported | SysinfoError::Io(_) | SysinfoError::Other(_)) => None,
     }
 }
 
-fn non_zero(value: u64) -> Option<u64> {\n    if value == 0 {\n        None\n    } else {\n        Some(value)\n    }\n}\n\nfn non_empty_text(value: &str) -> Option<FixedText<TEXT_CAPACITY>> {
+fn non_zero(value: u64) -> Option<u64> {
+    if value == 0 {
+        None
+    } else {
+        Some(value)
+    }
+}
+
+fn non_empty_text(value: &str) -> Option<FixedText<TEXT_CAPACITY>> {
     let trimmed = value.trim();
 
     if trimmed.is_empty() {
@@ -190,5 +200,16 @@ mod tests {
         provider.discover().expect("first discovery should succeed");
         provider.discover().expect("second discovery should succeed");
         assert!(provider.system.is_some());
+    }
+
+    #[test]
+    fn unavailable_os_metadata_does_not_discard_the_snapshot() {
+        assert!(optional_sysinfo_text(Err(SysinfoError::Unsupported)).is_none());
+    }
+
+    #[test]
+    fn zero_total_memory_is_not_reported_as_detected() {
+        assert_eq!(non_zero(0), None);
+        assert_eq!(non_zero(1024), Some(1024));
     }
 }
