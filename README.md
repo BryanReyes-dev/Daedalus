@@ -215,7 +215,7 @@ cargo --version
 
 ### Clone and build
 
-Clone the repository (access is currently restricted because it is private):
+Clone the publicly visible repository:
 
 ```bash
 git clone https://github.com/BryanReyes-dev/Daedalus.git
