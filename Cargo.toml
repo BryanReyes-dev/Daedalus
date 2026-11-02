@@ -4,7 +4,10 @@ members = [
   "crates/runtime-protocol",
   "crates/runtime-engine",
   "crates/runtime-ipc",
+  "crates/daedalus-system-info",
+  "crates/daedalus-system-discovery",
   "apps/runtime-daemon",
+  "apps/daedalus-cli",
 ]
 
 [workspace.package]
