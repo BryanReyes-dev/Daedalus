@@ -1,101 +1,80 @@
 //! Portable, allocation-free system information contracts.
 //!
-//! This crate is intentionally `no_std`. It defines the data model and
-//! provider boundary that host operating systems and embedded board-support
-//! packages can implement. It does not inspect hardware itself.
+//! This crate is intentionally no_std. It defines data types and a provider
+//! boundary that host operating systems and embedded board-support packages
+//! can implement. It does not inspect hardware itself.
 
 #![no_std]
 
-pub use heapless::String as FixedText;
+pub use heapless::{String as FixedText, Vec as FixedVec};
 
-/// Maximum UTF-8 byte capacity for a system-information text field.
 pub const TEXT_CAPACITY: usize = 96;
+pub const MAX_STORAGE_DEVICES: usize = 16;
+pub const MAX_GPU_DEVICES: usize = 8;
+pub const MAX_THERMAL_SENSORS: usize = 32;
 
-/// Create a bounded text value without allocating.
-///
-/// Values are truncated only at UTF-8 character boundaries. Callers should
-/// choose capacities appropriate for the field being populated.
 pub fn bounded_text(value: &str) -> FixedText<TEXT_CAPACITY> {
     let mut output = FixedText::new();
-
     for character in value.chars() {
-        if output.push(character).is_err() {
-            break;
-        }
+        if output.push(character).is_err() { break; }
     }
-
     output
 }
 
-/// Operating-system or execution-environment family.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OsFamily {
-    Windows,
-    Linux,
-    MacOs,
-    Android,
-    Ios,
-    FreeBsd,
-    NetBsd,
-    BareMetal,
-    Other,
+    Windows, Linux, MacOs, Android, Ios, FreeBsd, NetBsd, OpenBsd, DragonFly,
+    Solaris, Illumos, Haiku, BareMetal, Other,
 }
 
 impl OsFamily {
     pub const fn as_str(self) -> &'static str {
         match self {
-            Self::Windows => "windows",
-            Self::Linux => "linux",
-            Self::MacOs => "macos",
-            Self::Android => "android",
-            Self::Ios => "ios",
-            Self::FreeBsd => "freebsd",
-            Self::NetBsd => "netbsd",
-            Self::BareMetal => "bare-metal",
-            Self::Other => "other",
+            Self::Windows => "windows", Self::Linux => "linux", Self::MacOs => "macos",
+            Self::Android => "android", Self::Ios => "ios", Self::FreeBsd => "freebsd",
+            Self::NetBsd => "netbsd", Self::OpenBsd => "openbsd", Self::DragonFly => "dragonfly",
+            Self::Solaris => "solaris", Self::Illumos => "illumos", Self::Haiku => "haiku",
+            Self::BareMetal => "bare-metal", Self::Other => "other",
         }
     }
 }
 
-/// Normalized processor architecture.
-///
-/// `Other` is paired with `architecture_name` so new architectures do not
-/// require a breaking enum change before the runtime can report their name.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Architecture {
-    X86,
-    X86_64,
-    Arm,
-    Aarch64,
-    RiscV32,
-    RiscV64,
-    Wasm32,
-    Other,
+    X86, X86_64, Arm, Aarch64, RiscV32, RiscV64, PowerPc, PowerPc64,
+    S390x, Mips, Mips64, LoongArch64, Wasm32, Wasm64, Other,
 }
 
 impl Architecture {
     pub fn from_name(name: &str) -> Self {
-        if name.eq_ignore_ascii_case("x86")
-            || name.eq_ignore_ascii_case("i386")
-            || name.eq_ignore_ascii_case("i586")
-            || name.eq_ignore_ascii_case("i686")
-        {
+        if ["x86", "i386", "i486", "i586", "i686"].iter().any(|v| name.eq_ignore_ascii_case(v)) {
             Self::X86
         } else if name.eq_ignore_ascii_case("x86_64") || name.eq_ignore_ascii_case("amd64") {
             Self::X86_64
-        } else if name.eq_ignore_ascii_case("arm")
-            || name.eq_ignore_ascii_case("armv6")
-            || name.eq_ignore_ascii_case("armv7")
-        {
+        } else if ["arm", "armv6", "armv7", "armv7l"].iter().any(|v| name.eq_ignore_ascii_case(v)) {
             Self::Arm
         } else if name.eq_ignore_ascii_case("aarch64") || name.eq_ignore_ascii_case("arm64") {
             Self::Aarch64
-        } else if name.eq_ignore_ascii_case("riscv32") {
+        } else if ["riscv32", "riscv32imac"].iter().any(|v| name.eq_ignore_ascii_case(v)) {
             Self::RiscV32
-        } else if name.eq_ignore_ascii_case("riscv64") {
+        } else if ["riscv64", "riscv64gc"].iter().any(|v| name.eq_ignore_ascii_case(v)) {
             Self::RiscV64
+        } else if ["powerpc", "ppc"].iter().any(|v| name.eq_ignore_ascii_case(v)) {
+            Self::PowerPc
+        } else if ["powerpc64", "ppc64", "ppc64le"].iter().any(|v| name.eq_ignore_ascii_case(v)) {
+            Self::PowerPc64
+        } else if name.eq_ignore_ascii_case("s390x") {
+            Self::S390x
+        } else if name.eq_ignore_ascii_case("mips") {
+            Self::Mips
+        } else if name.eq_ignore_ascii_case("mips64") {
+            Self::Mips64
+        } else if name.eq_ignore_ascii_case("loongarch64") {
+            Self::LoongArch64
         } else if name.eq_ignore_ascii_case("wasm32") {
             Self::Wasm32
+        } else if name.eq_ignore_ascii_case("wasm64") {
+            Self::Wasm64
         } else {
             Self::Other
         }
@@ -103,35 +82,24 @@ impl Architecture {
 
     pub const fn as_str(self) -> &'static str {
         match self {
-            Self::X86 => "x86",
-            Self::X86_64 => "x86_64",
-            Self::Arm => "arm",
-            Self::Aarch64 => "aarch64",
-            Self::RiscV32 => "riscv32",
-            Self::RiscV64 => "riscv64",
-            Self::Wasm32 => "wasm32",
-            Self::Other => "other",
+            Self::X86 => "x86", Self::X86_64 => "x86_64", Self::Arm => "arm",
+            Self::Aarch64 => "aarch64", Self::RiscV32 => "riscv32", Self::RiscV64 => "riscv64",
+            Self::PowerPc => "powerpc", Self::PowerPc64 => "powerpc64", Self::S390x => "s390x",
+            Self::Mips => "mips", Self::Mips64 => "mips64", Self::LoongArch64 => "loongarch64",
+            Self::Wasm32 => "wasm32", Self::Wasm64 => "wasm64", Self::Other => "other",
         }
     }
 }
 
-/// Whether the provider returned all baseline fields or only a subset.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DiscoveryStatus {
-    Complete,
-    Partial,
-}
+pub enum DiscoveryStatus { Complete, Partial }
 
 impl DiscoveryStatus {
     pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Complete => "complete",
-            Self::Partial => "partial",
-        }
+        match self { Self::Complete => "complete", Self::Partial => "partial" }
     }
 }
 
-/// Operating-system, execution-environment and architecture information.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PlatformInfo {
     pub os_family: OsFamily,
@@ -142,39 +110,95 @@ pub struct PlatformInfo {
     pub architecture_name: Option<FixedText<TEXT_CAPACITY>>,
 }
 
-/// Processor information.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ProcessorInfo {
     pub model: Option<FixedText<TEXT_CAPACITY>>,
     pub vendor: Option<FixedText<TEXT_CAPACITY>>,
     pub logical_processors: Option<u32>,
     pub physical_cores: Option<u32>,
+    pub frequency_mhz: Option<u64>,
 }
 
-/// Physical memory information. Values are expressed in bytes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MemoryInfo {
     pub total_bytes: Option<u64>,
     pub available_bytes: Option<u64>,
+    pub used_bytes: Option<u64>,
+    pub swap_total_bytes: Option<u64>,
+    pub swap_available_bytes: Option<u64>,
+    pub swap_used_bytes: Option<u64>,
 }
 
-/// A normalized snapshot of the host or embedded target.
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ProductInfo {
+    pub vendor: Option<FixedText<TEXT_CAPACITY>>,
+    pub name: Option<FixedText<TEXT_CAPACITY>>,
+    pub family: Option<FixedText<TEXT_CAPACITY>>,
+    pub version: Option<FixedText<TEXT_CAPACITY>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MotherboardInfo {
+    pub vendor: Option<FixedText<TEXT_CAPACITY>>,
+    pub model: Option<FixedText<TEXT_CAPACITY>>,
+    pub version: Option<FixedText<TEXT_CAPACITY>>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StorageKind { Hdd, Ssd, Unknown }
+
+impl StorageKind {
+    pub const fn as_str(self) -> &'static str {
+        match self { Self::Hdd => "hdd", Self::Ssd => "ssd", Self::Unknown => "unknown" }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StorageDeviceInfo {
+    pub name: Option<FixedText<TEXT_CAPACITY>>,
+    pub kind: StorageKind,
+    pub file_system: Option<FixedText<TEXT_CAPACITY>>,
+    pub total_bytes: Option<u64>,
+    pub available_bytes: Option<u64>,
+    pub removable: bool,
+    pub read_only: bool,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct GpuInfo {
+    pub vendor: Option<FixedText<TEXT_CAPACITY>>,
+    pub model: Option<FixedText<TEXT_CAPACITY>>,
+    pub total_memory_bytes: Option<u64>,
+    pub used_memory_bytes: Option<u64>,
+    pub usage_percent: Option<f32>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ThermalSensorInfo {
+    pub label: FixedText<TEXT_CAPACITY>,
+    pub temperature_celsius: Option<f32>,
+    pub maximum_celsius: Option<f32>,
+    pub critical_celsius: Option<f32>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct SystemSnapshot {
     pub schema_version: u16,
     pub status: DiscoveryStatus,
     pub platform: PlatformInfo,
     pub processor: Option<ProcessorInfo>,
     pub memory: Option<MemoryInfo>,
+    pub product: Option<ProductInfo>,
+    pub motherboard: Option<MotherboardInfo>,
+    pub storage_devices: FixedVec<StorageDeviceInfo, MAX_STORAGE_DEVICES>,
+    /// None means unsupported; Some(empty) means queried with no devices found.
+    pub gpus: Option<FixedVec<GpuInfo, MAX_GPU_DEVICES>>,
+    /// None means unsupported; Some(empty) means queried with no sensors found.
+    pub thermal_sensors: Option<FixedVec<ThermalSensorInfo, MAX_THERMAL_SENSORS>>,
 }
 
-/// Errors that a system-information provider can report without allocating.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DiscoveryError {
-    UnsupportedPlatform,
-    InitializationFailed,
-    DataUnavailable,
-}
+pub enum DiscoveryError { UnsupportedPlatform, InitializationFailed, DataUnavailable }
 
 impl DiscoveryError {
     pub const fn code(self) -> &'static str {
@@ -187,23 +211,13 @@ impl DiscoveryError {
 
     pub const fn message(self) -> &'static str {
         match self {
-            Self::UnsupportedPlatform => {
-                "No system-information provider is available for this target."
-            }
-            Self::InitializationFailed => {
-                "The system-information provider could not be initialized."
-            }
+            Self::UnsupportedPlatform => "No system-information provider is available for this target.",
+            Self::InitializationFailed => "The system-information provider could not be initialized.",
             Self::DataUnavailable => "The system-information provider could not read system data.",
         }
     }
 }
 
-/// Provider boundary implemented by operating-system adapters or embedded
-/// board-support packages.
-///
-/// Implementations may use OS APIs, a BSP, an RTOS interface, or application-
-/// supplied hardware readings. The contract has no dependency on `std`,
-/// dynamic allocation, Electron, or a specific hardware vendor.
 pub trait SystemInfoProvider {
     fn discover(&mut self) -> Result<SystemSnapshot, DiscoveryError>;
 }
@@ -217,30 +231,25 @@ mod tests {
         assert_eq!(Architecture::from_name("AMD64"), Architecture::X86_64);
         assert_eq!(Architecture::from_name("arm64"), Architecture::Aarch64);
         assert_eq!(Architecture::from_name("riscv64"), Architecture::RiscV64);
+        assert_eq!(Architecture::from_name("ppc64le"), Architecture::PowerPc64);
         assert_eq!(Architecture::from_name("custom-chip"), Architecture::Other);
     }
 
     #[test]
     fn bounded_text_truncates_at_utf8_boundaries() {
-        let mut long_value = FixedText::<192>::new();
-        for _ in 0..TEXT_CAPACITY {
-            long_value.push('é').expect("test input fits");
-        }
-        let bounded = bounded_text(long_value.as_str());
-
-        assert!(bounded.len() <= TEXT_CAPACITY);
-        assert!(core::str::from_utf8(bounded.as_bytes()).is_ok());
+        let mut input = FixedText::<192>::new();
+        for _ in 0..TEXT_CAPACITY { input.push('é').expect("test input fits"); }
+        let output = bounded_text(input.as_str());
+        assert!(output.len() <= TEXT_CAPACITY);
+        assert!(core::str::from_utf8(output.as_bytes()).is_ok());
     }
 
     #[test]
-    fn portable_contract_uses_explicit_availability() {
-        let memory = MemoryInfo {
-            total_bytes: Some(1024),
-            available_bytes: None,
-        };
-
-        assert_eq!(memory.total_bytes, Some(1024));
-        assert_eq!(memory.available_bytes, None);
-        assert_eq!(DiscoveryStatus::Partial.as_str(), "partial");
+    fn device_collections_are_bounded() {
+        let storage: FixedVec<StorageDeviceInfo, MAX_STORAGE_DEVICES> = FixedVec::new();
+        let gpus: FixedVec<GpuInfo, MAX_GPU_DEVICES> = FixedVec::new();
+        let sensors: FixedVec<ThermalSensorInfo, MAX_THERMAL_SENSORS> = FixedVec::new();
+        assert!(storage.is_empty() && gpus.is_empty() && sensors.is_empty());
+        assert_eq!(StorageKind::Ssd.as_str(), "ssd");
     }
 }
