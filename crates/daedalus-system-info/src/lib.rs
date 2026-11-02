@@ -228,8 +228,11 @@ mod tests {
 
     #[test]
     fn bounded_text_truncates_at_utf8_boundaries() {
-        let long_value = "é".repeat(TEXT_CAPACITY);
-        let bounded = bounded_text(&long_value);
+        let mut long_value = FixedText::<192>::new();
+        for _ in 0..TEXT_CAPACITY {
+            long_value.push('é').expect("test input fits");
+        }
+        let bounded = bounded_text(long_value.as_str());
 
         assert!(bounded.len() <= TEXT_CAPACITY);
         assert!(core::str::from_utf8(bounded.as_bytes()).is_ok());
