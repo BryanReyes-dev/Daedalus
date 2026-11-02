@@ -17,6 +17,7 @@ The current implementation provides a portable system-information contract, a ho
   - [Repository boundaries](#repository-boundaries)
 - [Architecture](#architecture)
   - [Request flow](#request-flow)
+  - [Design decisions](#design-decisions)
   - [Portable system-information contract](#portable-system-information-contract)
   - [Host discovery coverage](#host-discovery-coverage)
 - [Getting Started](#getting-started)
@@ -139,6 +140,37 @@ daedalus-runtime -> runtime-ipc -> runtime-engine
 
 See [agents-files/ARCHITECTURE.md](./agents-files/ARCHITECTURE.md) for the durable architecture record and [docs/SYSTEM_DISCOVERY.md](./docs/SYSTEM_DISCOVERY.md) for the hardware-discovery contract.
 
+### Design decisions
+
+#### Why keep `daedalus-system-info` no_std and allocation-free?
+
+The portable contract is deliberately separated from host discovery and JSON transport. It uses fixed-capacity `heapless` strings and vectors, so representing a snapshot does not require a global allocator or operating-system APIs. That keeps the data model usable by a future firmware, RTOS, or board-specific provider that may not have a general-purpose heap.
+
+The host adapter and the current runtime/transport layers are separate `std` crates. `sysinfo` is used only by the host-discovery adapter; JSON serialization is performed by the runtime crates. Keeping those dependencies out of `daedalus-system-info` prevents host and transport requirements from becoming requirements of the portable data contract.
+
+This boundary is an embedded-enabling design decision, not a claim that the current daemon or CLI runs on a microcontroller. A board-specific provider, target profile, transport, and native hardware tests are still required. The documented `thumbv7em-none-eabihf` check is a suggested future validation step; it has not been reported as run.
+
+#### Why newline-delimited JSON over stdin/stdout?
+
+The daemon uses one JSON request per input line and one JSON response per output line. This is intentionally a small local process protocol:
+
+- It does not need an HTTP listener, an open TCP port, port allocation, or port-collision handling.
+- It avoids requiring a network firewall rule solely for communication with a locally supervised child process.
+- It gives a future desktop host a straightforward way to spawn the runtime, pipe requests/responses, and manage the child process lifecycle.
+- It keeps the transport easy to inspect with shell tools and simple to exercise in tests.
+
+The current repository implements the stdio daemon; it does not yet implement desktop-side process spawning or a remote HTTP/gRPC service. A network transport could be added later if multi-client or remote access becomes a real requirement.
+
+#### Why run host-discovery tests serially?
+
+The recommended workspace command is:
+
+```bash
+cargo test --workspace -- --test-threads=1
+```
+
+System-information tests inspect live host state rather than a fully isolated fixture. The upstream `sysinfo` project specifically recommends limiting parallel test execution because its system-inspection tests are more likely to succeed with fewer concurrent test threads. Serial execution follows that guidance and reduces overlapping host queries. This README does not assert a specific WMI race or kernel-handle bug in Daedalus.
+
 ### Portable system-information contract
 
 The `daedalus-system-info` crate contains no OS calls and does not require a heap allocator. It defines fixed-capacity strings and collections, normalized OS/architecture types, snapshot structures, discovery status, and the `SystemInfoProvider` trait.
@@ -169,7 +201,7 @@ The host adapter uses [sysinfo 0.40.1](https://docs.rs/sysinfo/0.40.1/sysinfo/).
 
 ### Requirements
 
-- Rust 1.95 or newer.
+- Rust 1.95 or newer. This is the minimum supported Rust version (MSRV) of the pinned `sysinfo 0.40.1` dependency, not a claim that Rust 1.95 is the latest stable release. See the [sysinfo 0.40.1 crate documentation](https://docs.rs/crate/sysinfo/0.40.1) for its published MSRV.
 - Cargo (installed with the Rust toolchain).
 - Git.
 - A host OS supported by the current discovery backend for live hardware information.
@@ -252,6 +284,33 @@ The `ping` command checks the in-process engine. It does not start or contact th
 ### Hardware discovery output
 
 A successful `hardware` response uses the standard runtime response envelope. The snapshot is nested under `result`.
+
+The excerpt below preserves core fields from an earlier Windows 11 development-machine capture. It is intentionally partial—not a fabricated full response—and the values are specific to that machine:
+
+```json
+{
+  "platform": {
+    "osFamily": "windows",
+    "architecture": "x86_64"
+  },
+  "processor": {
+    "model": "AMD Ryzen 5 5500",
+    "logicalProcessors": 12,
+    "physicalCores": 6
+  },
+  "memory": {
+    "totalBytes": 16960598016
+  }
+}
+```
+
+To capture a fresh complete response from your own machine:
+
+```bash
+cargo run -p daedalus-cli -- hardware > hardware-output.json
+```
+
+The redirected file contains machine-specific platform and hardware information. Review it before sharing or committing it; it is not needed by the project test suite.
 
 | Field | Description |
 |---|---|
@@ -414,7 +473,7 @@ Run the full suite from the workspace root:
 cargo test --workspace -- --test-threads=1
 ```
 
-Serial execution is recommended for tests that inspect live host system information, reducing interference between concurrent OS queries.
+Serial execution is recommended for tests that inspect live host system information. The upstream [sysinfo testing guidance](https://docs.rs/crate/sysinfo/0.40.1) also recommends limiting the number of parallel test threads for system-inspection tests. This is a reliability recommendation; it is not a claim that Daedalus has a confirmed WMI race condition.
 
 ### Focused crate tests
 
@@ -457,7 +516,7 @@ The project author reported successful validation on Windows 11 on 2026-11-02:
 - `cargo test --workspace -- --test-threads=1`
 - CLI smoke tests for `hardware`, `info`, `ping`, `--help`, and `--version`
 
-This is project-author-reported local evidence, not a GitHub Actions result. Native runtime testing on Linux, macOS, Android/iOS, BSD, and Raspberry Pi hardware remains pending. Cross-compilation or upstream `sysinfo` support is not proof of correct runtime discovery on a target machine.
+This is project-author-reported local evidence, not a GitHub Actions result. The reported development toolchain was Rust 1.99.1 / Cargo 1.99.0; the dependency MSRV remains 1.95. Native runtime testing on Linux, macOS, Android/iOS, BSD, and Raspberry Pi hardware remains pending. Cross-compilation or upstream `sysinfo` support is not proof of correct runtime discovery on a target machine.
 
 GitHub Actions and per-platform CI workflows are deliberately deferred to a later task.
 
@@ -551,8 +610,8 @@ The context file is intentionally short-lived. Update it when new tests, platfor
 
 ## Licensing and Release Status
 
-This repository is currently private. Its checked-in `LICENSE` file states All Rights Reserved. The possible future public-core model and Apache License 2.0/DCO approach have not been applied.
+This repository is publicly visible on GitHub, but public visibility does not make it open source or grant redistribution rights. The checked-in `LICENSE` currently states All Rights Reserved and describes the software as proprietary and confidential. Apache License 2.0 and DCO contribution terms have not been applied.
 
-Before any public release, the repository owner must explicitly approve the repository boundary, install the exact license and notices, establish contribution/DCO instructions, review dependencies and intellectual-property obligations, and change repository visibility. Do not assume this README grants rights to use, copy, modify, or redistribute the software.
+Do not describe this repository as Apache-licensed or freely redistributable unless the owner deliberately changes the checked-in license, adds the corresponding contribution terms and notices, and reviews the repository's contents for publication. The README itself does not grant a license.
 
 The separate Daedalus Desktop and Daedalus Marketplace products remain private.
