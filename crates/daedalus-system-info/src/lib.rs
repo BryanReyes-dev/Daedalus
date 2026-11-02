@@ -16,52 +16,106 @@ pub const MAX_THERMAL_SENSORS: usize = 32;
 pub fn bounded_text(value: &str) -> FixedText<TEXT_CAPACITY> {
     let mut output = FixedText::new();
     for character in value.chars() {
-        if output.push(character).is_err() { break; }
+        if output.push(character).is_err() {
+            break;
+        }
     }
     output
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OsFamily {
-    Windows, Linux, MacOs, Android, Ios, FreeBsd, NetBsd, OpenBsd, DragonFly,
-    Solaris, Illumos, Haiku, BareMetal, Other,
+    Windows,
+    Linux,
+    MacOs,
+    Android,
+    Ios,
+    FreeBsd,
+    NetBsd,
+    OpenBsd,
+    DragonFly,
+    Solaris,
+    Illumos,
+    Haiku,
+    BareMetal,
+    Other,
 }
 
 impl OsFamily {
     pub const fn as_str(self) -> &'static str {
         match self {
-            Self::Windows => "windows", Self::Linux => "linux", Self::MacOs => "macos",
-            Self::Android => "android", Self::Ios => "ios", Self::FreeBsd => "freebsd",
-            Self::NetBsd => "netbsd", Self::OpenBsd => "openbsd", Self::DragonFly => "dragonfly",
-            Self::Solaris => "solaris", Self::Illumos => "illumos", Self::Haiku => "haiku",
-            Self::BareMetal => "bare-metal", Self::Other => "other",
+            Self::Windows => "windows",
+            Self::Linux => "linux",
+            Self::MacOs => "macos",
+            Self::Android => "android",
+            Self::Ios => "ios",
+            Self::FreeBsd => "freebsd",
+            Self::NetBsd => "netbsd",
+            Self::OpenBsd => "openbsd",
+            Self::DragonFly => "dragonfly",
+            Self::Solaris => "solaris",
+            Self::Illumos => "illumos",
+            Self::Haiku => "haiku",
+            Self::BareMetal => "bare-metal",
+            Self::Other => "other",
         }
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Architecture {
-    X86, X86_64, Arm, Aarch64, RiscV32, RiscV64, PowerPc, PowerPc64,
-    S390x, Mips, Mips64, LoongArch64, Wasm32, Wasm64, Other,
+    X86,
+    X86_64,
+    Arm,
+    Aarch64,
+    RiscV32,
+    RiscV64,
+    PowerPc,
+    PowerPc64,
+    S390x,
+    Mips,
+    Mips64,
+    LoongArch64,
+    Wasm32,
+    Wasm64,
+    Other,
 }
 
 impl Architecture {
     pub fn from_name(name: &str) -> Self {
-        if ["x86", "i386", "i486", "i586", "i686"].iter().any(|v| name.eq_ignore_ascii_case(v)) {
+        if ["x86", "i386", "i486", "i586", "i686"]
+            .iter()
+            .any(|v| name.eq_ignore_ascii_case(v))
+        {
             Self::X86
         } else if name.eq_ignore_ascii_case("x86_64") || name.eq_ignore_ascii_case("amd64") {
             Self::X86_64
-        } else if ["arm", "armv6", "armv7", "armv7l"].iter().any(|v| name.eq_ignore_ascii_case(v)) {
+        } else if ["arm", "armv6", "armv7", "armv7l"]
+            .iter()
+            .any(|v| name.eq_ignore_ascii_case(v))
+        {
             Self::Arm
         } else if name.eq_ignore_ascii_case("aarch64") || name.eq_ignore_ascii_case("arm64") {
             Self::Aarch64
-        } else if ["riscv32", "riscv32imac"].iter().any(|v| name.eq_ignore_ascii_case(v)) {
+        } else if ["riscv32", "riscv32imac"]
+            .iter()
+            .any(|v| name.eq_ignore_ascii_case(v))
+        {
             Self::RiscV32
-        } else if ["riscv64", "riscv64gc"].iter().any(|v| name.eq_ignore_ascii_case(v)) {
+        } else if ["riscv64", "riscv64gc"]
+            .iter()
+            .any(|v| name.eq_ignore_ascii_case(v))
+        {
             Self::RiscV64
-        } else if ["powerpc", "ppc"].iter().any(|v| name.eq_ignore_ascii_case(v)) {
+        } else if ["powerpc", "ppc"]
+            .iter()
+            .any(|v| name.eq_ignore_ascii_case(v))
+        {
             Self::PowerPc
-        } else if ["powerpc64", "ppc64", "ppc64le"].iter().any(|v| name.eq_ignore_ascii_case(v)) {
+        } else if ["powerpc64", "ppc64", "ppc64le"]
+            .iter()
+            .any(|v| name.eq_ignore_ascii_case(v))
+        {
             Self::PowerPc64
         } else if name.eq_ignore_ascii_case("s390x") {
             Self::S390x
@@ -82,21 +136,37 @@ impl Architecture {
 
     pub const fn as_str(self) -> &'static str {
         match self {
-            Self::X86 => "x86", Self::X86_64 => "x86_64", Self::Arm => "arm",
-            Self::Aarch64 => "aarch64", Self::RiscV32 => "riscv32", Self::RiscV64 => "riscv64",
-            Self::PowerPc => "powerpc", Self::PowerPc64 => "powerpc64", Self::S390x => "s390x",
-            Self::Mips => "mips", Self::Mips64 => "mips64", Self::LoongArch64 => "loongarch64",
-            Self::Wasm32 => "wasm32", Self::Wasm64 => "wasm64", Self::Other => "other",
+            Self::X86 => "x86",
+            Self::X86_64 => "x86_64",
+            Self::Arm => "arm",
+            Self::Aarch64 => "aarch64",
+            Self::RiscV32 => "riscv32",
+            Self::RiscV64 => "riscv64",
+            Self::PowerPc => "powerpc",
+            Self::PowerPc64 => "powerpc64",
+            Self::S390x => "s390x",
+            Self::Mips => "mips",
+            Self::Mips64 => "mips64",
+            Self::LoongArch64 => "loongarch64",
+            Self::Wasm32 => "wasm32",
+            Self::Wasm64 => "wasm64",
+            Self::Other => "other",
         }
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DiscoveryStatus { Complete, Partial }
+pub enum DiscoveryStatus {
+    Complete,
+    Partial,
+}
 
 impl DiscoveryStatus {
     pub const fn as_str(self) -> &'static str {
-        match self { Self::Complete => "complete", Self::Partial => "partial" }
+        match self {
+            Self::Complete => "complete",
+            Self::Partial => "partial",
+        }
     }
 }
 
@@ -145,11 +215,19 @@ pub struct MotherboardInfo {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum StorageKind { Hdd, Ssd, Unknown }
+pub enum StorageKind {
+    Hdd,
+    Ssd,
+    Unknown,
+}
 
 impl StorageKind {
     pub const fn as_str(self) -> &'static str {
-        match self { Self::Hdd => "hdd", Self::Ssd => "ssd", Self::Unknown => "unknown" }
+        match self {
+            Self::Hdd => "hdd",
+            Self::Ssd => "ssd",
+            Self::Unknown => "unknown",
+        }
     }
 }
 
@@ -200,7 +278,11 @@ pub struct SystemSnapshot {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum DiscoveryError { UnsupportedPlatform, InitializationFailed, DataUnavailable }
+pub enum DiscoveryError {
+    UnsupportedPlatform,
+    InitializationFailed,
+    DataUnavailable,
+}
 
 impl DiscoveryError {
     pub const fn code(self) -> &'static str {
@@ -213,8 +295,12 @@ impl DiscoveryError {
 
     pub const fn message(self) -> &'static str {
         match self {
-            Self::UnsupportedPlatform => "No system-information provider is available for this target.",
-            Self::InitializationFailed => "The system-information provider could not be initialized.",
+            Self::UnsupportedPlatform => {
+                "No system-information provider is available for this target."
+            }
+            Self::InitializationFailed => {
+                "The system-information provider could not be initialized."
+            }
             Self::DataUnavailable => "The system-information provider could not read system data.",
         }
     }
@@ -240,7 +326,9 @@ mod tests {
     #[test]
     fn bounded_text_truncates_at_utf8_boundaries() {
         let mut input = FixedText::<192>::new();
-        for _ in 0..TEXT_CAPACITY { input.push('é').expect("test input fits"); }
+        for _ in 0..TEXT_CAPACITY {
+            input.push('é').expect("test input fits");
+        }
         let output = bounded_text(input.as_str());
         assert!(output.len() <= TEXT_CAPACITY);
         assert!(core::str::from_utf8(output.as_bytes()).is_ok());

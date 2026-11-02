@@ -5,8 +5,8 @@ use daedalus_system_info::{
     MAX_GPU_DEVICES, MAX_STORAGE_DEVICES, MAX_THERMAL_SENSORS, TEXT_CAPACITY,
 };
 use sysinfo::{
-    Components, CpuRefreshKind, DiskKind, Disks, Error as SysinfoError, Gpus,
-    MemoryRefreshKind, Motherboard, Product, System,
+    Components, CpuRefreshKind, DiskKind, Disks, Error as SysinfoError, Gpus, MemoryRefreshKind,
+    Motherboard, Product, System,
 };
 
 /// Host discovery adapter. It does not request process, user, network, host
@@ -31,7 +31,9 @@ impl SysinfoProvider {
 }
 
 impl Default for SysinfoProvider {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl SystemInfoProvider for SysinfoProvider {
@@ -42,10 +44,11 @@ impl SystemInfoProvider for SysinfoProvider {
             self.system = Some(system);
         }
 
-        let system = self.system.as_mut().ok_or(DiscoveryError::InitializationFailed)?;
-        system.refresh_memory_specifics(
-            MemoryRefreshKind::nothing().with_ram().with_swap()
-        );
+        let system = self
+            .system
+            .as_mut()
+            .ok_or(DiscoveryError::InitializationFailed)?;
+        system.refresh_memory_specifics(MemoryRefreshKind::nothing().with_ram().with_swap());
         system.refresh_cpu_specifics(CpuRefreshKind::nothing().with_frequency());
 
         let architecture_name = System::cpu_arch();
@@ -87,8 +90,7 @@ impl SystemInfoProvider for SysinfoProvider {
             disks.refresh(true);
         }
         let storage_devices = self.disks.as_ref().map(|disks| {
-            let mut devices: FixedVec<StorageDeviceInfo, MAX_STORAGE_DEVICES> =
-                FixedVec::new();
+            let mut devices: FixedVec<StorageDeviceInfo, MAX_STORAGE_DEVICES> = FixedVec::new();
 
             for disk in disks {
                 let kind = match disk.kind() {
@@ -126,7 +128,9 @@ impl SystemInfoProvider for SysinfoProvider {
                     used_memory_bytes: gpu.used_memory(),
                     usage_percent: finite_percentage(gpu.usage()),
                 };
-                if devices.push(device).is_err() { break; }
+                if devices.push(device).is_err() {
+                    break;
+                }
             }
             devices
         });
@@ -135,8 +139,7 @@ impl SystemInfoProvider for SysinfoProvider {
             components.refresh(true);
         }
         let thermal_sensors = self.components.as_ref().map(|components| {
-            let mut sensors: FixedVec<ThermalSensorInfo, MAX_THERMAL_SENSORS> =
-                FixedVec::new();
+            let mut sensors: FixedVec<ThermalSensorInfo, MAX_THERMAL_SENSORS> = FixedVec::new();
             for component in components {
                 let sensor = ThermalSensorInfo {
                     label: bounded_text(component.label()),
@@ -144,19 +147,28 @@ impl SystemInfoProvider for SysinfoProvider {
                     maximum_celsius: finite_value(component.max()),
                     critical_celsius: finite_value(component.critical()),
                 };
-                if sensors.push(sensor).is_err() { break; }
+                if sensors.push(sensor).is_err() {
+                    break;
+                }
             }
             sensors
         });
 
         let baseline_complete = platform.os_name.is_some()
             && platform.architecture_name.is_some()
-            && processor.as_ref().and_then(|cpu| cpu.logical_processors).is_some()
+            && processor
+                .as_ref()
+                .and_then(|cpu| cpu.logical_processors)
+                .is_some()
             && memory.total_bytes.is_some();
 
         Ok(SystemSnapshot {
             schema_version: 1,
-            status: if baseline_complete { DiscoveryStatus::Complete } else { DiscoveryStatus::Partial },
+            status: if baseline_complete {
+                DiscoveryStatus::Complete
+            } else {
+                DiscoveryStatus::Partial
+            },
             platform,
             processor,
             memory: Some(memory),
@@ -176,8 +188,11 @@ fn product_info() -> Option<ProductInfo> {
         family: optional_text(Product::family()),
         version: optional_text(Product::version()),
     };
-    if product.vendor.is_some() || product.name.is_some()
-        || product.family.is_some() || product.version.is_some() {
+    if product.vendor.is_some()
+        || product.name.is_some()
+        || product.family.is_some()
+        || product.version.is_some()
+    {
         Some(product)
     } else {
         None
@@ -210,12 +225,20 @@ fn optional_text(value: Result<String, SysinfoError>) -> Option<FixedText<TEXT_C
 }
 
 fn non_zero(value: u64) -> Option<u64> {
-    if value == 0 { None } else { Some(value) }
+    if value == 0 {
+        None
+    } else {
+        Some(value)
+    }
 }
 
 fn non_empty_text(value: &str) -> Option<FixedText<TEXT_CAPACITY>> {
     let value = value.trim();
-    if value.is_empty() { None } else { Some(bounded_text(value)) }
+    if value.is_empty() {
+        None
+    } else {
+        Some(bounded_text(value))
+    }
 }
 
 fn finite_value(value: Option<f32>) -> Option<f32> {
@@ -227,36 +250,70 @@ fn finite_percentage(value: Option<f32>) -> Option<f32> {
 }
 
 #[cfg(target_os = "windows")]
-const fn current_os_family() -> OsFamily { OsFamily::Windows }
+const fn current_os_family() -> OsFamily {
+    OsFamily::Windows
+}
 #[cfg(target_os = "linux")]
-const fn current_os_family() -> OsFamily { OsFamily::Linux }
+const fn current_os_family() -> OsFamily {
+    OsFamily::Linux
+}
 #[cfg(target_os = "macos")]
-const fn current_os_family() -> OsFamily { OsFamily::MacOs }
+const fn current_os_family() -> OsFamily {
+    OsFamily::MacOs
+}
 #[cfg(target_os = "android")]
-const fn current_os_family() -> OsFamily { OsFamily::Android }
+const fn current_os_family() -> OsFamily {
+    OsFamily::Android
+}
 #[cfg(target_os = "ios")]
-const fn current_os_family() -> OsFamily { OsFamily::Ios }
+const fn current_os_family() -> OsFamily {
+    OsFamily::Ios
+}
 #[cfg(target_os = "freebsd")]
-const fn current_os_family() -> OsFamily { OsFamily::FreeBsd }
+const fn current_os_family() -> OsFamily {
+    OsFamily::FreeBsd
+}
 #[cfg(target_os = "netbsd")]
-const fn current_os_family() -> OsFamily { OsFamily::NetBsd }
+const fn current_os_family() -> OsFamily {
+    OsFamily::NetBsd
+}
 #[cfg(target_os = "openbsd")]
-const fn current_os_family() -> OsFamily { OsFamily::OpenBsd }
+const fn current_os_family() -> OsFamily {
+    OsFamily::OpenBsd
+}
 #[cfg(target_os = "dragonfly")]
-const fn current_os_family() -> OsFamily { OsFamily::DragonFly }
+const fn current_os_family() -> OsFamily {
+    OsFamily::DragonFly
+}
 #[cfg(target_os = "solaris")]
-const fn current_os_family() -> OsFamily { OsFamily::Solaris }
+const fn current_os_family() -> OsFamily {
+    OsFamily::Solaris
+}
 #[cfg(target_os = "illumos")]
-const fn current_os_family() -> OsFamily { OsFamily::Illumos }
+const fn current_os_family() -> OsFamily {
+    OsFamily::Illumos
+}
 #[cfg(target_os = "haiku")]
-const fn current_os_family() -> OsFamily { OsFamily::Haiku }
+const fn current_os_family() -> OsFamily {
+    OsFamily::Haiku
+}
 #[cfg(not(any(
-    target_os = "windows", target_os = "linux", target_os = "macos",
-    target_os = "android", target_os = "ios", target_os = "freebsd",
-    target_os = "netbsd", target_os = "openbsd", target_os = "dragonfly",
-    target_os = "solaris", target_os = "illumos", target_os = "haiku"
+    target_os = "windows",
+    target_os = "linux",
+    target_os = "macos",
+    target_os = "android",
+    target_os = "ios",
+    target_os = "freebsd",
+    target_os = "netbsd",
+    target_os = "openbsd",
+    target_os = "dragonfly",
+    target_os = "solaris",
+    target_os = "illumos",
+    target_os = "haiku"
 )))]
-const fn current_os_family() -> OsFamily { OsFamily::Other }
+const fn current_os_family() -> OsFamily {
+    OsFamily::Other
+}
 
 #[cfg(test)]
 mod tests {

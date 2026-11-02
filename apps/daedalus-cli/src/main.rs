@@ -66,7 +66,11 @@ fn main() -> ExitCode {
         }
     }
 
-    if response.ok { ExitCode::SUCCESS } else { ExitCode::FAILURE }
+    if response.ok {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
+    }
 }
 
 fn print_help() {

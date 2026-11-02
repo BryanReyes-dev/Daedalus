@@ -2,9 +2,7 @@
 
 use daedalus_runtime_protocol::{RuntimeRequest, RuntimeResponse, CURRENT_PROTOCOL_VERSION};
 use daedalus_system_discovery::SysinfoProvider;
-use daedalus_system_info::{
-    FixedText, SystemInfoProvider, SystemSnapshot, TEXT_CAPACITY,
-};
+use daedalus_system_info::{FixedText, SystemInfoProvider, SystemSnapshot, TEXT_CAPACITY};
 use serde_json::{json, Value};
 
 pub struct RuntimeEngine {
@@ -21,7 +19,9 @@ impl RuntimeEngine {
     where
         P: SystemInfoProvider + 'static,
     {
-        Self { system_info_provider: Box::new(provider) }
+        Self {
+            system_info_provider: Box::new(provider),
+        }
     }
 
     pub fn dispatch(&mut self, request: RuntimeRequest) -> RuntimeResponse {
@@ -66,7 +66,9 @@ impl RuntimeEngine {
 }
 
 impl Default for RuntimeEngine {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 fn text(value: &Option<FixedText<TEXT_CAPACITY>>) -> Option<&str> {
@@ -74,65 +76,88 @@ fn text(value: &Option<FixedText<TEXT_CAPACITY>>) -> Option<&str> {
 }
 
 fn snapshot_to_json(snapshot: &SystemSnapshot) -> Value {
-    let processor = snapshot.processor.as_ref().map(|cpu| json!({
-        "model": text(&cpu.model),
-        "vendor": text(&cpu.vendor),
-        "logicalProcessors": cpu.logical_processors,
-        "physicalCores": cpu.physical_cores,
-        "frequencyMhz": cpu.frequency_mhz
-    }));
+    let processor = snapshot.processor.as_ref().map(|cpu| {
+        json!({
+            "model": text(&cpu.model),
+            "vendor": text(&cpu.vendor),
+            "logicalProcessors": cpu.logical_processors,
+            "physicalCores": cpu.physical_cores,
+            "frequencyMhz": cpu.frequency_mhz
+        })
+    });
 
-    let memory = snapshot.memory.map(|memory| json!({
-        "totalBytes": memory.total_bytes,
-        "availableBytes": memory.available_bytes,
-        "usedBytes": memory.used_bytes,
-        "swapTotalBytes": memory.swap_total_bytes,
-        "swapAvailableBytes": memory.swap_available_bytes,
-        "swapUsedBytes": memory.swap_used_bytes
-    }));
+    let memory = snapshot.memory.map(|memory| {
+        json!({
+            "totalBytes": memory.total_bytes,
+            "availableBytes": memory.available_bytes,
+            "usedBytes": memory.used_bytes,
+            "swapTotalBytes": memory.swap_total_bytes,
+            "swapAvailableBytes": memory.swap_available_bytes,
+            "swapUsedBytes": memory.swap_used_bytes
+        })
+    });
 
-    let product = snapshot.product.as_ref().map(|product| json!({
-        "vendor": text(&product.vendor),
-        "name": text(&product.name),
-        "family": text(&product.family),
-        "version": text(&product.version)
-    }));
+    let product = snapshot.product.as_ref().map(|product| {
+        json!({
+            "vendor": text(&product.vendor),
+            "name": text(&product.name),
+            "family": text(&product.family),
+            "version": text(&product.version)
+        })
+    });
 
-    let motherboard = snapshot.motherboard.as_ref().map(|board| json!({
-        "vendor": text(&board.vendor),
-        "model": text(&board.model),
-        "version": text(&board.version)
-    }));
+    let motherboard = snapshot.motherboard.as_ref().map(|board| {
+        json!({
+            "vendor": text(&board.vendor),
+            "model": text(&board.model),
+            "version": text(&board.version)
+        })
+    });
 
     let storage_devices = snapshot.storage_devices.as_ref().map(|devices| {
-        devices.iter().map(|disk| json!({
-            "name": text(&disk.name),
-            "kind": disk.kind.as_str(),
-            "fileSystem": text(&disk.file_system),
-            "totalBytes": disk.total_bytes,
-            "availableBytes": disk.available_bytes,
-            "removable": disk.removable,
-            "readOnly": disk.read_only
-        })).collect::<Vec<_>>()
+        devices
+            .iter()
+            .map(|disk| {
+                json!({
+                    "name": text(&disk.name),
+                    "kind": disk.kind.as_str(),
+                    "fileSystem": text(&disk.file_system),
+                    "totalBytes": disk.total_bytes,
+                    "availableBytes": disk.available_bytes,
+                    "removable": disk.removable,
+                    "readOnly": disk.read_only
+                })
+            })
+            .collect::<Vec<_>>()
     });
 
     let gpus = snapshot.gpus.as_ref().map(|devices| {
-        devices.iter().map(|gpu| json!({
-            "vendor": text(&gpu.vendor),
-            "model": text(&gpu.model),
-            "totalMemoryBytes": gpu.total_memory_bytes,
-            "usedMemoryBytes": gpu.used_memory_bytes,
-            "usagePercent": gpu.usage_percent
-        })).collect::<Vec<_>>()
+        devices
+            .iter()
+            .map(|gpu| {
+                json!({
+                    "vendor": text(&gpu.vendor),
+                    "model": text(&gpu.model),
+                    "totalMemoryBytes": gpu.total_memory_bytes,
+                    "usedMemoryBytes": gpu.used_memory_bytes,
+                    "usagePercent": gpu.usage_percent
+                })
+            })
+            .collect::<Vec<_>>()
     });
 
     let sensors = snapshot.thermal_sensors.as_ref().map(|items| {
-        items.iter().map(|sensor| json!({
-            "label": sensor.label.as_str(),
-            "temperatureCelsius": sensor.temperature_celsius,
-            "maximumCelsius": sensor.maximum_celsius,
-            "criticalCelsius": sensor.critical_celsius
-        })).collect::<Vec<_>>()
+        items
+            .iter()
+            .map(|sensor| {
+                json!({
+                    "label": sensor.label.as_str(),
+                    "temperatureCelsius": sensor.temperature_celsius,
+                    "maximumCelsius": sensor.maximum_celsius,
+                    "criticalCelsius": sensor.critical_celsius
+                })
+            })
+            .collect::<Vec<_>>()
     });
 
     json!({
@@ -189,7 +214,8 @@ mod tests {
         arch.push_str("x86_64").unwrap();
         let mut cpu = FixedText::<96>::new();
         cpu.push_str("Test CPU").unwrap();
-        let storage: Option<FixedVec<StorageDeviceInfo, MAX_STORAGE_DEVICES>> = Some(FixedVec::new());
+        let storage: Option<FixedVec<StorageDeviceInfo, MAX_STORAGE_DEVICES>> =
+            Some(FixedVec::new());
         let gpus: Option<FixedVec<GpuInfo, MAX_GPU_DEVICES>> = Some(FixedVec::new());
         let sensors: Option<FixedVec<ThermalSensorInfo, MAX_THERMAL_SENSORS>> =
             Some(FixedVec::new());
@@ -240,7 +266,10 @@ mod tests {
     #[test]
     fn runtime_info_lists_only_implemented_capabilities() {
         let mut engine = RuntimeEngine::with_system_info_provider(MockProvider(Ok(sample())));
-        let result = engine.dispatch(request(1, "info-1", "runtime.getInfo")).result.unwrap();
+        let result = engine
+            .dispatch(request(1, "info-1", "runtime.getInfo"))
+            .result
+            .unwrap();
         assert_eq!(result["capabilities"].as_array().unwrap().len(), 3);
         assert_eq!(result["capabilities"][2], "hardware.discover");
     }
@@ -248,7 +277,10 @@ mod tests {
     #[test]
     fn hardware_response_contains_full_snapshot_schema() {
         let mut engine = RuntimeEngine::with_system_info_provider(MockProvider(Ok(sample())));
-        let result = engine.dispatch(request(1, "hardware-1", "hardware.discover")).result.unwrap();
+        let result = engine
+            .dispatch(request(1, "hardware-1", "hardware.discover"))
+            .result
+            .unwrap();
         assert_eq!(result["schemaVersion"], 1);
         assert_eq!(result["platform"]["osFamily"], "linux");
         assert_eq!(result["processor"]["frequencyMhz"], 3600);
@@ -265,7 +297,10 @@ mod tests {
         snapshot.gpus = None;
         snapshot.thermal_sensors = None;
         let mut engine = RuntimeEngine::with_system_info_provider(MockProvider(Ok(snapshot)));
-        let result = engine.dispatch(request(1, "optional", "hardware.discover")).result.unwrap();
+        let result = engine
+            .dispatch(request(1, "optional", "hardware.discover"))
+            .result
+            .unwrap();
         assert!(result["storageDevices"].is_null());
         assert!(result["gpus"].is_null());
         assert!(result["thermalSensors"].is_null());
@@ -274,7 +309,7 @@ mod tests {
     #[test]
     fn provider_errors_are_preserved() {
         let mut engine = RuntimeEngine::with_system_info_provider(MockProvider(Err(
-            DiscoveryError::UnsupportedPlatform
+            DiscoveryError::UnsupportedPlatform,
         )));
         let response = engine.dispatch(request(1, "unsupported", "hardware.discover"));
         assert!(!response.ok);
