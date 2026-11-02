@@ -287,13 +287,13 @@ cargo run -p daedalus-runtime
 Send a ping request from Git Bash:
 
 ```bash
-printf '%s\\n' '{"protocolVersion":1,"requestId":"ping-001","method":"runtime.ping","params":{}}' | cargo run -p daedalus-runtime
+printf '%s\n' '{"protocolVersion":1,"requestId":"ping-001","method":"runtime.ping","params":{}}' | cargo run -p daedalus-runtime
 ```
 
 Send a hardware request:
 
 ```bash
-printf '%s\\n' '{"protocolVersion":1,"requestId":"hardware-001","method":"hardware.discover","params":{}}' | cargo run -p daedalus-runtime
+printf '%s\n' '{"protocolVersion":1,"requestId":"hardware-001","method":"hardware.discover","params":{}}' | cargo run -p daedalus-runtime
 ```
 
 The daemon accepts multiple input lines in one process. Each non-empty line produces one response line. Malformed JSON produces an `INVALID_REQUEST` response and does not stop subsequent requests. Stdout is reserved for protocol messages; diagnostics go to stderr.
@@ -434,7 +434,7 @@ cargo run -p daedalus-cli -- info
 cargo run -p daedalus-cli -- ping
 cargo run -p daedalus-cli -- --help
 cargo run -p daedalus-cli -- --version
-printf '%s\\n' '{"protocolVersion":1,"requestId":"ping-001","method":"runtime.ping","params":{}}' | cargo run -p daedalus-runtime
+printf '%s\n' '{"protocolVersion":1,"requestId":"ping-001","method":"runtime.ping","params":{}}' | cargo run -p daedalus-runtime
 ```
 
 ### Checking the no_std contract
