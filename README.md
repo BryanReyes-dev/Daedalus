@@ -1,113 +1,141 @@
 # Daedalus
 
-**Daedalus is the public desktop application repository for a local-first AI workflow platform.**
+**Daedalus is an open, local-first AI workflow runtime written in Rust.**
 
-This repository is intended to contain the desktop user experience and application shell: the Next.js interface, the Electron host (with a possible future Tauri host), the renderer-to-host bridge, and the client-side integrations that connect the application to the Daedalus runtime and marketplace.
+This repository is the public core of the Daedalus ecosystem. It is intended to provide a reusable, headless execution runtime that developers, researchers, enterprises, and government teams can build, inspect, test, and integrate without depending on the proprietary Daedalus desktop application or hosted marketplace.
 
-The Rust execution runtime and the hosted marketplace are maintained separately:
+The desktop product and marketplace are maintained separately and remain private.
+
+## Repository boundaries
 
 | Repository | Visibility | Responsibility |
 |---|---|---|
-| **[Daedalus](https://github.com/BryanReyes-dev/Daedalus)** | Public | Desktop UI, application shell, user-facing workflows, host adapters, and client integrations |
-| **[Daedalus-Runtime](https://github.com/BryanReyes-dev/Daedalus-Runtime)** | Private | Rust runtime, workflow execution, model and archive handling, sandboxing, and runtime-side cryptographic operations |
-| **[Daedalus-Marketplace](https://github.com/BryanReyes-dev/Daedalus-Marketplace)** | Private | Storefront, creator services, artifact storage, licensing, payments, and payouts |
+| **[Daedalus](https://github.com/BryanReyes-dev/Daedalus)** | Public | Rust runtime, public protocol, CLI, system discovery, workflow execution, open package specifications, and developer SDKs |
+| **Daedalus Desktop** | Private | Next.js/React interface, Electron shell, visual workflow editor, application experience, and proprietary client integrations |
+| **[Daedalus Marketplace](https://github.com/BryanReyes-dev/Daedalus-Marketplace)** | Private | Storefront, creator services, artifact distribution, commercial entitlements, payments, and payouts |
 
-> **Repository status:** This repository currently contains its project README. The application source has not yet been migrated here. The existing Next.js/Electron/Rust codebase and the initial Rust foundation are still in the private `Daedalus-Runtime` repository and must be separated deliberately before this repository can be built as the desktop application.
+The public runtime must remain useful on its own. It must not require the desktop app, a marketplace account, a remote licensing server, or a network connection for its core local execution functionality.
 
-## Responsibilities and boundaries
+## Project goals
 
-### This repository: Daedalus desktop application
+### 1. Headless, cross-platform runtime
 
-The public application repository is responsible for:
+The runtime is designed to execute independently of any UI framework. The initial supported desktop operating systems are:
 
-- **User interface:** Next.js-based desktop interface, workflow authoring experience, settings, and user-facing status.
-- **Desktop host:** Electron main process and preload bridge; the host can be replaced by Tauri later without moving runtime responsibilities into the UI.
-- **Runtime integration:** A narrow, versioned client contract and host adapter for starting the runtime and exchanging requests/events.
-- **Marketplace integration:** User-facing sign-in, catalog, purchase, entitlement, and download flows that call the private marketplace service.
-- **Application experience:** Local preferences, presentation, onboarding, and orchestration of user-initiated actions.
+- Windows
+- Linux
+- macOS
 
-The renderer must not directly own workflow execution, model memory, privileged operating-system access, or cryptographic secrets. It should call narrowly scoped host capabilities, and the host should communicate with the runtime through a versioned local protocol.
+The same runtime contracts should be reusable by desktop, CLI, headless, and future embedded clients where the platform supports the required capabilities. Platform support will be documented and tested per target rather than assumed from successful compilation alone.
 
-### Private repository: Daedalus Runtime
+### 2. Hardware and system discovery
 
-The private runtime repository owns the execution engine and all runtime-critical behavior, including the planned:
+The runtime should expose a structured, privacy-conscious description of the host machine so higher-level applications can make informed decisions about model and workflow execution.
 
-- Portable workflow/DAG data structures and validation.
-- Workflow scheduling, execution state, cancellation, and resource arbitration.
-- `.dea` archive parsing, integrity checks, and package loading.
-- Model lifecycle and in-process inference.
-- Wasmtime/WASI guest execution and resource limits.
-- Runtime-side cryptographic verification, decryption interfaces, and key handling.
-- Hardware/system discovery and platform-specific runtime capabilities.
-- Headless runtime and CLI interfaces.
+The initial discovery milestone targets:
 
-The desktop application should consume the runtime through a stable protocol or a deliberately versioned integration package. It should not copy or reimplement the runtime engine.
+- Operating system, version, and architecture.
+- CPU model and logical processor count.
+- Total and available system memory where the platform provides it.
+- Explicit capability availability and unsupported/unknown values.
 
-### Private repository: Daedalus Marketplace
+GPU discovery, accelerator capabilities, driver details, device memory, and detailed topology will be added through platform-specific adapters after the initial cross-platform baseline is tested.
 
-The private marketplace repository owns hosted commercial services, including:
+System discovery should not silently collect serial numbers, persistent device identifiers, or unrelated personal data.
 
-- Storefront and creator-facing workflows.
-- PostgreSQL-backed catalog, creator, purchase, and entitlement records.
-- Encrypted artifact storage and controlled distribution.
-- License issuance and verification services.
-- Payment processing and creator payouts.
-- Release distribution and associated server-side operations.
+### 3. Portable workflow execution
 
-The marketplace is the authority for commercial entitlements and payment state. The desktop client presents those flows; it must not contain marketplace master secrets or signing private keys.
+The long-term runtime will provide:
 
-## Security and trust boundaries
+- Portable workflow/DAG definitions and validation.
+- Deterministic workflow state and lifecycle management.
+- Scheduling, cancellation, and resource budgets.
+- Native model loading and inference abstractions.
+- Wasmtime/WASI execution for capability-restricted workflow components.
+- A stable protocol for desktop and headless clients.
 
-This repository is public. Treat every client-side component as inspectable and potentially modifiable by the person running it.
+These capabilities are roadmap items until implemented, tested, and documented.
 
-- Never commit API secrets, marketplace signing keys, private decryption keys, production credentials, or customer data.
-- Do not rely on Electron, JavaScript, local hardware identifiers, or client-side checks as the sole enforcement of a commercial entitlement.
-- Keep authoritative license issuance and signing operations server-side. The runtime should validate signed, scoped authorization material according to the protocol agreed with the marketplace.
-- Assume that plaintext data made available on a user's machine—including decrypted package contents in memory—may be inspected by a sufficiently capable user with control of that machine.
-- Keep renderer permissions narrow: use context isolation, disable Node integration, expose explicit preload methods, validate IPC senders, and validate all runtime and marketplace inputs.
-- Do not describe hardware binding or client-side DRM as unbreakable copy protection. These controls can raise the cost of abuse, but they cannot make a user-controlled endpoint a trusted execution environment.
+### 4. Open package and cryptographic standards
 
-The private runtime is not publicly auditable through this repository. That is a deliberate consequence of the current repository-visibility decision and differs from an architecture where the core execution engine is open source.
+Public specifications should make package structure, integrity, and signature verification independently inspectable.
 
-## Intended application layout
+The runtime should support standard cryptographic verification against caller-provided trust roots. It must not depend on proprietary marketplace callbacks or secret verification algorithms to validate public package integrity.
 
-The exact layout will be established during migration. The expected separation is:
+Commercial package authorization and key release belong to the private desktop/marketplace integration. The public runtime should expose explicit, documented interfaces for consuming verified or authorized package content without implementing marketplace business logic.
+
+A cryptographic library or build feature is not, by itself, evidence of FIPS 140-3 validation. Any FIPS claim must identify the validated cryptographic module, its validated operating environment, configuration, and deployment boundary.
+
+## Intended architecture
+
+The initial implementation is deliberately smaller than the complete roadmap.
 
 ```text
-daedalus/
-├── apps/
-│   └── desktop-ui/
-│       ├── ui/                 # Next.js renderer
-│       └── electron/            # Electron main process and preload
-├── packages/
-│   └── runtime-client/          # Framework-neutral runtime contract
-├── scripts/                     # Development and release orchestration
-├── docs/                        # Application and integration documentation
-└── README.md
+Desktop application / CLI / headless client
+                    |
+            Versioned public protocol
+                    |
+              runtime-ipc
+                    |
+              runtime-engine
+              /     |      \
+       system-info  workflows  execution
+                    |
+          platform-specific adapters
 ```
 
-This repository should not contain the private runtime's Cargo workspace, execution-engine implementation, marketplace backend, database schema, or signing infrastructure. Small host-side adapters and protocol definitions may live here when they are specifically part of the public application integration.
+The runtime must not depend on Next.js, React, Electron, Tauri, or marketplace-specific services. Client applications own presentation and user interaction. The runtime owns host inspection and execution.
 
-## Development status
+## Current implementation status
 
-The repository is not yet ready for local application development because the application source and the runtime distribution boundary have not been migrated.
+**The public repository is at the start of its extraction and foundation milestone.**
 
-The migration should establish all of the following before declaring the desktop app buildable:
+The initial Rust foundation currently exists on a development branch in the private combined repository and has not yet been migrated into this public repository. It provides a versioned JSON request/response protocol, a small command dispatcher, newline-delimited stdio transport, and a standalone daemon. At this point, the implemented runtime methods are limited to `runtime.ping` and `runtime.getInfo`.
 
-1. The Next.js/Electron application source exists in this repository.
-2. The runtime is consumed through a pinned, versioned interface; the private runtime source is not copied into this repository.
-3. Local development has a documented runtime option, such as an authorized private runtime checkout or a development stub.
-4. Release builds obtain a matching, signed runtime binary/artifact without embedding credentials in the public source.
-5. Marketplace calls target documented APIs and do not expose server secrets.
-6. CI verifies the desktop application, its runtime compatibility, and its release artifact provenance.
+The following are not yet implemented in this public repository:
 
-Until those steps are complete, there are no reliable install, build, or run commands to document here.
+- Cross-platform system and hardware discovery.
+- Workflow DAG execution and scheduling.
+- Native in-process inference.
+- Wasmtime/WASI sandboxing.
+- The `.dea` archive format and packer.
+- Public-key signature verification.
+- Runtime CLI.
+- Platform CI and release artifacts.
 
-## Licensing
+Do not treat roadmap items as completed functionality.
 
-This is a public source repository, but public visibility alone does not grant permission to reuse, redistribute, or sell its contents. A license has not yet been specified in this repository; add the intended `LICENSE` file before accepting outside contributions or advertising reuse rights.
+## Near-term milestone: runtime foundation and system discovery
 
-## Related repositories
+The first public milestone is complete when a developer can:
 
-- [Daedalus Runtime](https://github.com/BryanReyes-dev/Daedalus-Runtime) — private Rust execution runtime.
-- [Daedalus Marketplace](https://github.com/BryanReyes-dev/Daedalus-Marketplace) — private hosted marketplace and licensing services.
+1. Build and test the Rust workspace independently of the desktop application.
+2. Run the daemon headlessly on Windows, Linux, and macOS.
+3. Send a versioned `hardware.discover` request over the public runtime interface.
+4. Receive normalized OS, CPU, architecture, and memory information.
+5. Get explicit unsupported or unavailable results rather than fabricated/default hardware values.
+6. Run automated tests and cross-platform CI for the supported targets.
+7. Read the implementation and reproduce the result using the public documentation.
+
+GPU inventory and model-specific capability scoring are subsequent milestones.
+
+## Development principles
+
+- **Rust owns execution and system inspection.** UI frameworks display results; they do not implement runtime behavior.
+- **Keep host-specific code behind adapters.** Public data models and protocol methods should not expose Windows, macOS, Linux, Electron, or Tauri implementation types.
+- **Prefer explicit capability reporting.** Unknown, unavailable, unsupported, and detected are distinct states.
+- **Minimize collection.** Discover resources required for execution, not personal or persistent device identity.
+- **Test on real target operating systems.** Cross-compiling is useful, but it does not replace runtime tests on each OS.
+- **Keep the core offline-capable.** Network-dependent commercial authorization must not be a prerequisite for ordinary local runtime operation.
+- **Be precise about security claims.** Public source enables inspection; it does not automatically prove the system secure, certified, or compliant.
+
+## Licensing and contributions
+
+The intended public licensing model is Apache License 2.0 with Developer Certificate of Origin (DCO) sign-offs. The repository must include the corresponding license and contribution instructions before accepting external contributions. Until those files are present, do not assume that this README alone grants a license.
+
+## Related private products
+
+- **Daedalus Desktop:** proprietary desktop application that consumes the public runtime.
+- **Daedalus Marketplace:** proprietary hosted storefront, creator, licensing, payment, and distribution services.
+
+The public runtime is not the private desktop application and does not contain its UI, commercial storefront, marketplace database, payment system, or marketplace secrets.
