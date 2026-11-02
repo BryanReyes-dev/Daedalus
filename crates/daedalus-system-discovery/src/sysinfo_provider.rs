@@ -2,13 +2,13 @@ use daedalus_system_info::{
     bounded_text, Architecture, DiscoveryError, DiscoveryStatus, MemoryInfo, OsFamily,
     PlatformInfo, ProcessorInfo, SystemInfoProvider, SystemSnapshot,
 };
-use sysinfo::System;
+use sysinfo::{CpuRefreshKind, System};
 
 /// Host operating-system provider backed by `sysinfo`.
 ///
 /// A provider instance retains its `System` object between discovery calls.
-/// It refreshes only CPU-list and memory information; it does not enumerate
-/// processes, users, disks, networks, or component sensors.
+/// It enumerates CPU metadata once and refreshes memory on each discovery.
+/// It does not enumerate processes, users, disks, networks, or component sensors.
 pub struct SysinfoProvider {
     system: Option<System>,
 }
@@ -32,9 +32,11 @@ impl SystemInfoProvider for SysinfoProvider {
         }
 
         if self.system.is_none() {
-            self.system = Some(
-                System::new().map_err(|_| DiscoveryError::InitializationFailed)?,
-            );
+            let mut system =
+                System::new().map_err(|_| DiscoveryError::InitializationFailed)?;
+            system.refresh_cpu_list(CpuRefreshKind::everything());
+            system.refresh_memory();
+            self.system = Some(system);
         }
 
         let system = self
@@ -42,11 +44,11 @@ impl SystemInfoProvider for SysinfoProvider {
             .as_mut()
             .ok_or(DiscoveryError::InitializationFailed)?;
 
-        system.refresh_cpu_list();
+        // Memory availability changes during runtime; CPU identity and topology
+        // are retained from the initial enumeration.
         system.refresh_memory();
 
-        let architecture_name = System::cpu_arch()
-            .unwrap_or_else(|| std::env::consts::ARCH.to_owned());
+        let architecture_name = System::cpu_arch();
         let architecture = Architecture::from_name(&architecture_name);
 
         let platform = PlatformInfo {
@@ -64,6 +66,7 @@ impl SystemInfoProvider for SysinfoProvider {
             vendor: non_empty_text(cpu.vendor_id()),
             logical_processors: u32::try_from(cpus.len()).ok(),
             physical_cores: System::physical_core_count()
+                .ok()
                 .and_then(|count| u32::try_from(count).ok()),
         });
 
