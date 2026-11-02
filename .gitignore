@@ -1,30 +1,9 @@
-# --- Rust / Cargo ---
+# Rust build outputs
 /target/
 **/*.rs.bk
 *.pdb
-# Ignore Cargo.lock in public library repos (daedalus-runtime), 
-# but KEEP Cargo.lock committed in binary/app repos (daedalus).
 
-# --- Node / TypeScript / Desktop UI (Electron / Tauri) ---
-node_modules/
-dist/
-out/
-.next/
-build/
-*.tsbuildinfo
-npm-debug.log*
-yarn-debug.log*
-pnpm-debug.log*
-
-# --- Daedalus Artifacts & AI Weights (CRITICAL: Prevents huge commits) ---
-*.dea
-*.gguf
-*.safetensors
-*.onnx
-*.wasm
-!**/fixtures/*.wasm
-
-# --- Security, DRM Keys & Environment Variables ---
+# Local environment and secrets
 .env
 .env.*
 !.env.example
@@ -34,13 +13,16 @@ pnpm-debug.log*
 *.p12
 secrets/
 
-# --- OS & Editor Files ---
+# Large model and package artifacts (store separately unless explicitly documented)
+*.gguf
+*.safetensors
+*.onnx
+*.dea
+
+# OS and editor files
 .DS_Store
 Thumbs.db
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
+.vscode/
 .idea/
 *.swp
+*.swo

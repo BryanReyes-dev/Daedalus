@@ -1,0 +1,11 @@
+[package]
+name = "daedalus-runtime-engine"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+daedalus-runtime-protocol = { path = "../runtime-protocol" }
+daedalus-system-info = { path = "../daedalus-system-info" }
+daedalus-system-discovery = { path = "../daedalus-system-discovery" }
+serde_json.workspace = true

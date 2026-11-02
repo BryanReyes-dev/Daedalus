@@ -1,0 +1,9 @@
+[package]
+name = "daedalus-system-discovery"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+daedalus-system-info = { path = "../daedalus-system-info" }
+sysinfo = { version = "0.40.1", features = ["gpu"] }
