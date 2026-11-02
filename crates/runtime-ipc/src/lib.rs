@@ -11,12 +11,12 @@ use daedalus_runtime_protocol::{RuntimeRequest, RuntimeResponse};
 pub fn serve_stdio() -> io::Result<()> {
     let stdin = io::stdin();
     let stdout = io::stdout();
-    let engine = RuntimeEngine::new();
+    let mut engine = RuntimeEngine::new();
 
-    serve(stdin.lock(), stdout.lock(), &engine)
+    serve(stdin.lock(), stdout.lock(), &mut engine)
 }
 
-fn serve<R, W>(reader: R, writer: W, engine: &RuntimeEngine) -> io::Result<()>
+fn serve<R, W>(reader: R, writer: W, engine: &mut RuntimeEngine) -> io::Result<()>
 where
     R: Read,
     W: Write,
@@ -59,7 +59,8 @@ mod tests {
         );
 
         let mut output = Vec::new();
-        serve(input.as_bytes(), &mut output, &RuntimeEngine::new())
+        let mut engine = RuntimeEngine::new();
+        serve(input.as_bytes(), &mut output, &mut engine)
             .expect("stdio request stream should be served");
 
         let lines: Vec<&str> = std::str::from_utf8(&output)
@@ -88,7 +89,8 @@ mod tests {
         );
 
         let mut output = Vec::new();
-        serve(input.as_bytes(), &mut output, &RuntimeEngine::new())
+        let mut engine = RuntimeEngine::new();
+        serve(input.as_bytes(), &mut output, &mut engine)
             .expect("malformed requests should not terminate the stream");
 
         let lines: Vec<&str> = std::str::from_utf8(&output)
