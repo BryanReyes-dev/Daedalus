@@ -8,9 +8,7 @@ use daedalus_runtime_protocol::{
     RuntimeRequest, RuntimeResponse, CURRENT_PROTOCOL_VERSION,
 };
 use daedalus_system_discovery::SysinfoProvider;
-use daedalus_system_info::{
-    DiscoveryError, SystemInfoProvider, SystemSnapshot,
-};
+use daedalus_system_info::{SystemInfoProvider, SystemSnapshot};
 use serde_json::{json, Value};
 
 pub struct RuntimeEngine {
@@ -143,8 +141,8 @@ fn system_snapshot_to_value(snapshot: &SystemSnapshot) -> Value {
 mod tests {
     use super::*;
     use daedalus_system_info::{
-        Architecture, DiscoveryStatus, FixedText, MemoryInfo, OsFamily, PlatformInfo,
-        ProcessorInfo,
+        Architecture, DiscoveryError, DiscoveryStatus, FixedText, MemoryInfo, OsFamily,
+        PlatformInfo, ProcessorInfo,
     };
 
     struct MockProvider {
