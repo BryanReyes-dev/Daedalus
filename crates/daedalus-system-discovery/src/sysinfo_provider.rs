@@ -13,7 +13,7 @@ use sysinfo::{
 /// name, mount path, serial number, UUID, asset tag, or PCI address data.
 pub struct SysinfoProvider {
     system: Option<System>,
-    disks: Disks,
+    disks: Option<Disks>,
     components: Option<Components>,
     gpus: Option<Gpus>,
 }
@@ -22,7 +22,7 @@ impl SysinfoProvider {
     pub fn new() -> Self {
         Self {
             system: None,
-            disks: Disks::new(),
+            disks: Disks::new().ok(),
             components: Components::new().ok(),
             // sysinfo currently provides GPU inventory on Windows, Linux and macOS.
             gpus: Gpus::new().ok(),
@@ -81,27 +81,37 @@ impl SystemInfoProvider for SysinfoProvider {
         let product = product_info();
         let motherboard = motherboard_info();
 
-        // Refresh inventory and remove devices that are no longer present.
-        self.disks.refresh(true);
-        let mut storage_devices: FixedVec<StorageDeviceInfo, MAX_STORAGE_DEVICES> =
-            FixedVec::new();
-        for disk in &self.disks {
-            let kind = match disk.kind() {
-                DiskKind::HDD => StorageKind::Hdd,
-                DiskKind::SSD => StorageKind::Ssd,
-                DiskKind::Unknown(_) => StorageKind::Unknown,
-            };
-            let device = StorageDeviceInfo {
-                name: non_empty_text(&disk.name().to_string_lossy()),
-                kind,
-                file_system: non_empty_text(&disk.file_system().to_string_lossy()),
-                total_bytes: non_zero(disk.total_space()),
-                available_bytes: Some(disk.available_space()),
-                removable: disk.is_removable(),
-                read_only: disk.is_read_only(),
-            };
-            if storage_devices.push(device).is_err() { break; }
+        // Storage discovery is optional on sysinfo targets. A failed
+        // constructor must not prevent CPU and memory discovery from working.
+        if let Some(disks) = self.disks.as_mut() {
+            disks.refresh(true);
         }
+        let storage_devices = self.disks.as_ref().map(|disks| {
+            let mut devices: FixedVec<StorageDeviceInfo, MAX_STORAGE_DEVICES> =
+                FixedVec::new();
+
+            for disk in disks.list() {
+                let kind = match disk.kind() {
+                    DiskKind::HDD => StorageKind::Hdd,
+                    DiskKind::SSD => StorageKind::Ssd,
+                    DiskKind::Unknown(_) => StorageKind::Unknown,
+                };
+                let device = StorageDeviceInfo {
+                    name: non_empty_text(&disk.name().to_string_lossy()),
+                    kind,
+                    file_system: non_empty_text(&disk.file_system().to_string_lossy()),
+                    total_bytes: non_zero(disk.total_space()),
+                    available_bytes: Some(disk.available_space()),
+                    removable: disk.is_removable(),
+                    read_only: disk.is_read_only(),
+                };
+                if devices.push(device).is_err() {
+                    break;
+                }
+            }
+
+            devices
+        });
 
         if let Some(gpus) = self.gpus.as_mut() {
             gpus.refresh(true);
