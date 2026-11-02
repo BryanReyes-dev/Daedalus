@@ -2,7 +2,7 @@ use daedalus_system_info::{
     bounded_text, Architecture, DiscoveryError, DiscoveryStatus, FixedText, MemoryInfo, OsFamily,
     PlatformInfo, ProcessorInfo, SystemInfoProvider, SystemSnapshot, TEXT_CAPACITY,
 };
-use sysinfo::{CpuRefreshKind, Error as SysinfoError, System};
+use sysinfo::{CpuRefreshKind, Error as SysinfoError, MemoryRefreshKind, System};
 
 /// Host operating-system provider backed by `sysinfo`.
 ///
@@ -30,7 +30,7 @@ impl SystemInfoProvider for SysinfoProvider {
         if self.system.is_none() {
             let mut system = System::new().map_err(map_sysinfo_error)?;
             system.refresh_cpu_list(CpuRefreshKind::everything());
-            system.refresh_memory();
+            system.refresh_memory_specifics(MemoryRefreshKind::nothing().with_ram());
             self.system = Some(system);
         }
 
@@ -66,7 +66,7 @@ impl SystemInfoProvider for SysinfoProvider {
         });
 
         let memory = MemoryInfo {
-            total_bytes: Some(system.total_memory()),
+            total_bytes: non_zero(system.total_memory()),
             available_bytes: Some(system.available_memory()),
         };
 
@@ -109,7 +109,7 @@ fn optional_sysinfo_text(
     }
 }
 
-fn non_empty_text(value: &str) -> Option<FixedText<TEXT_CAPACITY>> {
+fn non_zero(value: u64) -> Option<u64> {\n    if value == 0 {\n        None\n    } else {\n        Some(value)\n    }\n}\n\nfn non_empty_text(value: &str) -> Option<FixedText<TEXT_CAPACITY>> {
     let trimmed = value.trim();
 
     if trimmed.is_empty() {
