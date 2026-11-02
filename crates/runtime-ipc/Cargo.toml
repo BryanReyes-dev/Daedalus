@@ -1,0 +1,10 @@
+[package]
+name = "daedalus-runtime-ipc"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+daedalus-runtime-engine = { path = "../runtime-engine" }
+daedalus-runtime-protocol = { path = "../runtime-protocol" }
+serde_json.workspace = true
