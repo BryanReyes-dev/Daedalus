@@ -32,10 +32,10 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Check workspace
-        run: cargo check --workspace --locked
+        run: cargo check --workspace
 
       - name: Run tests
-        run: cargo test --workspace --locked
+        run: cargo test --workspace
 
   no-std-contract:
     name: no_std embedded contract
@@ -51,4 +51,4 @@ jobs:
           targets: thumbv7em-none-eabihf
 
       - name: Check allocation-free system contract
-        run: cargo check -p daedalus-system-info --target thumbv7em-none-eabihf --locked
+        run: cargo check -p daedalus-system-info --target thumbv7em-none-eabihf
