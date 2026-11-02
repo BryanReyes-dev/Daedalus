@@ -1,5 +1,7 @@
 # System Discovery API
 
+> This is the focused hardware-discovery API reference. The durable architecture authority is [agents-files/ARCHITECTURE.md](../agents-files/ARCHITECTURE.md); agent workflow rules are in [agents-files/AGENTS.md](../agents-files/AGENTS.md); current evidence and next work are in [agents-files/Agents_Context.md](../agents-files/Agents_Context.md); user-facing setup and usage are in [README.md](../README.md).
+
 ## Purpose
 
 System discovery reports platform identity and hardware resources that Daedalus can observe through its current host provider. It supports diagnostics and future model/workflow capability planning.
@@ -189,7 +191,13 @@ cargo test -p daedalus-runtime-engine
 cargo test --workspace -- --test-threads=1
 ```
 
-Native validation on each intended OS and hardware class remains a later milestone. System inspection tests are best run serially.
+System inspection tests are best run serially.
+
+## Project validation status
+
+As of 2026-11-02, the project author reported that the workspace formatting check, workspace compile check, full workspace test suite, and CLI smoke tests passed on Windows 11. This is local user-reported evidence; it is not a GitHub Actions result.
+
+Native execution and hardware validation on Linux, macOS, Android/iOS, BSD, and Raspberry Pi devices remain pending. Upstream `sysinfo` platform coverage and cross-compilation do not establish that this repository's provider works correctly on those targets. Per-platform native tests and GitHub Actions are intentionally deferred to a later implementation task.
 
 ## Planned extensions
 
