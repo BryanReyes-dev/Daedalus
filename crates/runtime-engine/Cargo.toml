@@ -1,0 +1,9 @@
+[package]
+name = "daedalus-runtime-engine"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[dependencies]
+daedalus-runtime-protocol = { path = "../runtime-protocol" }
+serde_json.workspace = true
