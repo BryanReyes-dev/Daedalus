@@ -29,8 +29,7 @@ impl SystemInfoProvider for SysinfoProvider {
     fn discover(&mut self) -> Result<SystemSnapshot, DiscoveryError> {
         if self.system.is_none() {
             let mut system = System::new().map_err(map_sysinfo_error)?;
-            system.refresh_cpu_list(CpuRefreshKind::everything());
-            system.refresh_memory_specifics(MemoryRefreshKind::nothing().with_ram());
+            system.refresh_cpu_list(CpuRefreshKind::nothing());
             self.system = Some(system);
         }
 
