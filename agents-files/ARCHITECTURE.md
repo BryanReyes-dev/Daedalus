@@ -24,7 +24,7 @@ The current repository contains the Rust workspace described below. The ecosyste
 | Daedalus Desktop | Private desktop interface and application experience, including the Electron shell and visual workflow UI |
 | Daedalus Marketplace | Private hosted storefront, creator services, distribution, commercial entitlements, payments, and payouts |
 
-The repository is currently private. Its checked-in LICENSE remains proprietary / All Rights Reserved. Any later public release or Apache-2.0 licensing change requires a separate, explicit licensing and publication decision, the correct license text, contribution terms, and repository visibility review. A README statement or an architecture goal does not grant a license.
+The repository is publicly visible on GitHub. Its checked-in LICENSE remains proprietary / All Rights Reserved. Public visibility does not grant permission to use, modify, or redistribute the software. Any Apache-2.0 licensing change still requires an explicit decision, the correct license text, contribution terms, and a review of the repository contents. A README statement or an architecture goal does not grant a license.
 
 The Rust runtime must not absorb proprietary desktop UI or marketplace business logic. Interfaces to those systems should be explicit and should not make marketplace availability a prerequisite for local runtime operation.
 
