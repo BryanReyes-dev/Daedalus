@@ -104,15 +104,17 @@ fn snapshot_to_json(snapshot: &SystemSnapshot) -> Value {
         "version": text(&board.version)
     }));
 
-    let storage_devices = snapshot.storage_devices.iter().map(|disk| json!({
-        "name": text(&disk.name),
-        "kind": disk.kind.as_str(),
-        "fileSystem": text(&disk.file_system),
-        "totalBytes": disk.total_bytes,
-        "availableBytes": disk.available_bytes,
-        "removable": disk.removable,
-        "readOnly": disk.read_only
-    })).collect::<Vec<_>>();
+    let storage_devices = snapshot.storage_devices.as_ref().map(|devices| {
+        devices.iter().map(|disk| json!({
+            "name": text(&disk.name),
+            "kind": disk.kind.as_str(),
+            "fileSystem": text(&disk.file_system),
+            "totalBytes": disk.total_bytes,
+            "availableBytes": disk.available_bytes,
+            "removable": disk.removable,
+            "readOnly": disk.read_only
+        })).collect::<Vec<_>>()
+    });
 
     let gpus = snapshot.gpus.as_ref().map(|devices| {
         devices.iter().map(|gpu| json!({
@@ -187,7 +189,7 @@ mod tests {
         arch.push_str("x86_64").unwrap();
         let mut cpu = FixedText::<96>::new();
         cpu.push_str("Test CPU").unwrap();
-        let storage: FixedVec<StorageDeviceInfo, MAX_STORAGE_DEVICES> = FixedVec::new();
+        let storage: Option<FixedVec<StorageDeviceInfo, MAX_STORAGE_DEVICES>> = Some(FixedVec::new());
         let gpus: Option<FixedVec<GpuInfo, MAX_GPU_DEVICES>> = Some(FixedVec::new());
         let sensors: Option<FixedVec<ThermalSensorInfo, MAX_THERMAL_SENSORS>> =
             Some(FixedVec::new());
@@ -259,10 +261,12 @@ mod tests {
     #[test]
     fn unsupported_optional_categories_are_null() {
         let mut snapshot = sample();
+        snapshot.storage_devices = None;
         snapshot.gpus = None;
         snapshot.thermal_sensors = None;
         let mut engine = RuntimeEngine::with_system_info_provider(MockProvider(Ok(snapshot)));
         let result = engine.dispatch(request(1, "optional", "hardware.discover")).result.unwrap();
+        assert!(result["storageDevices"].is_null());
         assert!(result["gpus"].is_null());
         assert!(result["thermalSensors"].is_null());
     }
