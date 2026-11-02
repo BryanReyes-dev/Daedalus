@@ -138,11 +138,11 @@ Example response (illustrative values only):
 | memory.*Bytes | RAM and swap byte counts |
 | product | Manufacturer/system model metadata; null when no supported model fields are available |
 | motherboard | Board vendor/model/version; null when unsupported or not exposed |
-| storageDevices | Best-effort disk/volume inventory; mount paths are excluded |
+| storageDevices | Disk/volume inventory when the storage API is available; `null` when it cannot be queried; mount paths are excluded |
 | gpus | Array when GPU enumeration is available; null when the provider cannot query it |
 | thermalSensors | Sensor array when the API is available; null when sensor enumeration cannot run |
 
-Missing scalar readings serialize as JSON null. A device category array of [] means the query ran but returned no entries; null means that category could not be queried. The portable contract limits a snapshot to 16 storage entries, 8 GPUs and 32 thermal sensors.
+Missing scalar readings serialize as JSON null. For `storageDevices`, `gpus`, and `thermalSensors`, an array of `[]` means the query ran but returned no entries; `null` means that category could not be queried. The portable contract limits a snapshot to 16 storage entries, 8 GPUs and 32 thermal sensors.
 
 ## Privacy boundary
 
