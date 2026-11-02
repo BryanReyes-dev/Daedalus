@@ -117,20 +117,20 @@ cargo run -p daedalus-cli -- hardware
 
 It does not upload, persist, or transmit the snapshot.
 
-The result has these top-level fields:
+The CLI prints a standard runtime response envelope. For a successful hardware request, the hardware snapshot is inside the envelope's `result` object. Its fields are:
 
-| Field | Description |
+| Field in `result` | Description |
 |---|---|
-| schemaVersion | Hardware-snapshot schema version |
-| status | complete when baseline OS, architecture, logical CPU count and total RAM fields exist; otherwise partial |
-| platform | OS family/name/version, kernel version, normalized and raw CPU architecture |
-| processor | CPU model/vendor, logical processors, physical cores and reported frequency |
-| memory | RAM and swap totals, available and used bytes |
-| product | Manufacturer/system model/family/version when available |
-| motherboard | Board manufacturer/model/version when available |
-| storageDevices | Storage kind, filesystem, capacity/free bytes, removable/read-only flags |
-| gpus | GPU inventory, or null when the host provider cannot query it |
-| thermalSensors | Temperature sensor readings, or null when sensor enumeration is unavailable |
+| `schemaVersion` | Hardware-snapshot schema version |
+| `status` | `complete` when baseline OS, architecture, logical CPU count and total RAM fields exist; otherwise `partial` |
+| `platform` | OS family/name/version, kernel version, normalized and raw CPU architecture |
+| `processor` | CPU model/vendor, logical processors, physical cores and reported frequency |
+| `memory` | RAM and swap totals, available and used bytes |
+| `product` | Manufacturer/system model/family/version when available |
+| `motherboard` | Board manufacturer/model/version when available |
+| `storageDevices` | Storage kind, filesystem, capacity/free bytes, removable/read-only flags |
+| `gpus` | GPU inventory, or `null` when the host provider cannot query it |
+| `thermalSensors` | Temperature sensor readings, or `null` when sensor enumeration is unavailable |
 
 Memory and storage sizes are byte counts. CPU frequency is MHz. GPU utilization is a percentage. Temperatures are degrees Celsius.
 
