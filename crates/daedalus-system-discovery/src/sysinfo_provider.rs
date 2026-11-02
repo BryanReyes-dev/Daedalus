@@ -1,8 +1,8 @@
 use daedalus_system_info::{
-    bounded_text, Architecture, DiscoveryError, DiscoveryStatus, MemoryInfo, OsFamily,
-    PlatformInfo, ProcessorInfo, SystemInfoProvider, SystemSnapshot,
+    bounded_text, Architecture, DiscoveryError, DiscoveryStatus, FixedText, MemoryInfo, OsFamily,
+    PlatformInfo, ProcessorInfo, SystemInfoProvider, SystemSnapshot, TEXT_CAPACITY,
 };
-use sysinfo::{CpuRefreshKind, System};
+use sysinfo::{CpuRefreshKind, Error as SysinfoError, System};
 
 /// Host operating-system provider backed by `sysinfo`.
 ///
@@ -27,13 +27,8 @@ impl Default for SysinfoProvider {
 
 impl SystemInfoProvider for SysinfoProvider {
     fn discover(&mut self) -> Result<SystemSnapshot, DiscoveryError> {
-        if !sysinfo::IS_SUPPORTED_SYSTEM {
-            return Err(DiscoveryError::UnsupportedPlatform);
-        }
-
         if self.system.is_none() {
-            let mut system =
-                System::new().map_err(|_| DiscoveryError::InitializationFailed)?;
+            let mut system = System::new().map_err(map_sysinfo_error)?;
             system.refresh_cpu_list(CpuRefreshKind::everything());
             system.refresh_memory();
             self.system = Some(system);
@@ -53,11 +48,11 @@ impl SystemInfoProvider for SysinfoProvider {
 
         let platform = PlatformInfo {
             os_family: current_os_family(),
-            os_name: System::name().as_deref().map(bounded_text),
-            os_version: System::os_version().as_deref().map(bounded_text),
-            kernel_version: System::kernel_version().as_deref().map(bounded_text),
+            os_name: optional_sysinfo_text(System::name())?,
+            os_version: optional_sysinfo_text(System::os_version())?,
+            kernel_version: optional_sysinfo_text(System::kernel_version())?,
             architecture,
-            architecture_name: Some(bounded_text(&architecture_name)),
+            architecture_name: non_empty_text(&architecture_name),
         };
 
         let cpus = system.cpus();
@@ -97,7 +92,24 @@ impl SystemInfoProvider for SysinfoProvider {
     }
 }
 
-fn non_empty_text(value: &str) -> Option<daedalus_system_info::FixedText<96>> {
+fn map_sysinfo_error(error: SysinfoError) -> DiscoveryError {
+    match error {
+        SysinfoError::Unsupported => DiscoveryError::UnsupportedPlatform,
+        SysinfoError::Io(_) | SysinfoError::Other(_) => DiscoveryError::InitializationFailed,
+    }
+}
+
+fn optional_sysinfo_text(
+    result: Result<String, SysinfoError>,
+) -> Result<Option<FixedText<TEXT_CAPACITY>>, DiscoveryError> {
+    match result {
+        Ok(value) => Ok(non_empty_text(&value)),
+        Err(SysinfoError::Unsupported) => Err(DiscoveryError::UnsupportedPlatform),
+        Err(SysinfoError::Io(_) | SysinfoError::Other(_)) => Ok(None),
+    }
+}
+
+fn non_empty_text(value: &str) -> Option<FixedText<TEXT_CAPACITY>> {
     let trimmed = value.trim();
 
     if trimmed.is_empty() {
@@ -161,10 +173,6 @@ mod tests {
 
     #[test]
     fn supported_host_returns_a_normalized_snapshot() {
-        if !sysinfo::IS_SUPPORTED_SYSTEM {
-            return;
-        }
-
         let mut provider = SysinfoProvider::new();
         let snapshot = provider
             .discover()
@@ -178,10 +186,6 @@ mod tests {
 
     #[test]
     fn provider_reuses_its_system_instance() {
-        if !sysinfo::IS_SUPPORTED_SYSTEM {
-            return;
-        }
-
         let mut provider = SysinfoProvider::new();
         provider.discover().expect("first discovery should succeed");
         provider.discover().expect("second discovery should succeed");
