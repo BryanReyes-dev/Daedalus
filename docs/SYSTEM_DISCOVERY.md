@@ -1,41 +1,44 @@
 # System Discovery API
 
-## Goal
+## Purpose
 
-System discovery reports the resources and platform capabilities that Daedalus can reliably observe. It is designed for model/workflow admission decisions, diagnostics, and client presentation.
+System discovery reports platform identity and hardware resources that Daedalus can observe through its current host provider. It supports diagnostics and future model/workflow capability planning.
 
-The baseline implementation reports OS identity, architecture, CPU identity/topology, and physical memory. It does not collect process lists or persistent device identifiers.
+Discovery is best-effort. Operating systems expose different APIs and permission levels, so missing readings remain optional rather than being replaced with fabricated values.
 
-## Public crate boundaries
+## Crate boundaries
 
-### `daedalus-system-info`
+### daedalus-system-info
 
-This is the portable contract crate:
+The portable contract crate provides no_std types and does not require a heap allocator. It uses fixed-capacity heapless strings and vectors, Daedalus-owned normalized types, a SystemInfoProvider trait, explicit discovery status and optional readings.
 
-- `#![no_std]`
-- No heap allocator required.
-- Fixed-capacity `heapless::String` fields.
-- Daedalus-owned normalized data structures.
-- The `SystemInfoProvider` trait.
-- Explicit `DiscoveryError`, `DiscoveryStatus`, and optional values.
+The crate contains no operating-system calls and does not inspect hardware itself.
 
-A board-support package, RTOS integration, or application can implement `SystemInfoProvider` with target-specific readings.
+### daedalus-system-discovery
 
-### `daedalus-system-discovery`
+The standard-library host adapter uses sysinfo 0.40.1. It retains its System, Disks, Components and Gpus provider instances where the current operating system supports them.
 
-This is the standard-library host adapter. It currently uses `sysinfo` for supported desktop and server operating systems.
+It refreshes CPU frequency, RAM/swap, storage, GPU and thermal values on demand. It reads product and motherboard model metadata when available. It does not request process/user lists, host names, network interfaces, MAC addresses, disk mount paths, serial numbers, UUIDs, asset tags or PCI addresses.
 
-The provider retains a single `sysinfo::System` instance. CPU identity/topology is enumerated at initialization; RAM is refreshed for each discovery request. It does not call `refresh_all` and does not enumerate processes, users, disks, networks, or temperature sensors.
+## Host platform coverage
 
-Unsupported platforms are reported as `UNSUPPORTED_PLATFORM`. Data that is unavailable is represented as `null` in the JSON response.
+The upstream sysinfo 0.40.1 project documents host OS support for Windows, Linux, macOS, Android, iOS, FreeBSD, NetBSD and Raspberry Pi-class Linux systems.
 
-## Runtime method
+Categories have narrower support:
 
-Method name: `hardware.discover`
+- GPU inventory: Windows, Linux and macOS.
+- Product and motherboard metadata: not implemented on NetBSD.
+- Thermal component inventory: not implemented on NetBSD; it may be unavailable in VMs, containers, WSL, sandboxed applications or systems without exposed sensors.
+- Newer Android versions may restrict CPU details for ordinary applications.
+- GPU usage and memory fields depend on driver support. macOS uses shared GPU/system memory, so dedicated VRAM values are not reported.
 
-Protocol version: `1`
+A supported host OS does not guarantee every category or every hardware revision will be detected. Individual native validation is still required.
 
-Parameters: empty JSON object.
+## Protocol method
+
+- Method: hardware.discover
+- Protocol version: 1
+- Parameters: empty JSON object.
 
 Example request:
 
@@ -70,46 +73,128 @@ Example response (illustrative values only):
       "model": "Example CPU",
       "vendor": "Example Vendor",
       "logicalProcessors": 12,
-      "physicalCores": 6
+      "physicalCores": 6,
+      "frequencyMhz": 3600
     },
     "memory": {
       "totalBytes": 17179869184,
-      "availableBytes": 8589934592
-    }
+      "availableBytes": 8589934592,
+      "usedBytes": 8589934592,
+      "swapTotalBytes": 0,
+      "swapAvailableBytes": 0,
+      "swapUsedBytes": 0
+    },
+    "product": {
+      "vendor": "Example Manufacturer",
+      "name": "Example System",
+      "family": "Example Product Family",
+      "version": "Revision 1"
+    },
+    "motherboard": {
+      "vendor": "Example Board Vendor",
+      "model": "Example Board",
+      "version": "Revision 1"
+    },
+    "storageDevices": [
+      {
+        "name": "Disk 0",
+        "kind": "ssd",
+        "fileSystem": "NTFS",
+        "totalBytes": 1000204886016,
+        "availableBytes": 700000000000,
+        "removable": false,
+        "readOnly": false
+      }
+    ],
+    "gpus": [
+      {
+        "vendor": "Example GPU Vendor",
+        "model": "Example GPU",
+        "totalMemoryBytes": 8589934592,
+        "usedMemoryBytes": 1073741824,
+        "usagePercent": 18.5
+      }
+    ],
+    "thermalSensors": [
+      {
+        "label": "CPU",
+        "temperatureCelsius": 42.0,
+        "maximumCelsius": 66.0,
+        "criticalCelsius": 95.0
+      }
+    ]
   }
 }
 ```
 
-### Field semantics
+## Snapshot field semantics
 
-- `schemaVersion` versions the snapshot structure independently from the transport envelope.
-- `status` is `complete` when baseline OS/architecture/CPU-count/memory data is present; otherwise it is `partial`.
-- `osFamily` is a normalized family such as `windows`, `linux`, `macos`, `android`, `ios`, `freebsd`, `netbsd`, `bare-metal`, or `other`.
-- `architecture` is a normalized architecture label; `architectureName` retains the provider's raw architecture string.
-- CPU model/vendor and physical core count are optional because platforms may not expose them.
-- Memory values are byte counts. `availableBytes` describes memory available for reuse, not merely completely unallocated memory.
-- Missing fields are JSON `null`, not zero or fabricated labels.
+| Field | Meaning |
+|---|---|
+| schemaVersion | Snapshot structure version, independent of protocol version |
+| status | complete when baseline OS label, architecture label, logical CPU count and total RAM exist; otherwise partial |
+| platform | Normalized OS family, OS labels, kernel version and architecture |
+| processor.frequencyMhz | Reported CPU frequency in MHz; not necessarily a sustained or all-core clock |
+| memory.*Bytes | RAM and swap byte counts |
+| product | Manufacturer/system model metadata; null when no supported model fields are available |
+| motherboard | Board vendor/model/version; null when unsupported or not exposed |
+| storageDevices | Best-effort disk/volume inventory; mount paths are excluded |
+| gpus | Array when GPU enumeration is available; null when the provider cannot query it |
+| thermalSensors | Sensor array when the API is available; null when sensor enumeration cannot run |
 
-## Direct CLI use
+Missing scalar readings serialize as JSON null. A device category array of [] means the query ran but returned no entries; null means that category could not be queried. The portable contract limits a snapshot to 16 storage entries, 8 GPUs and 32 thermal sensors.
 
-From the workspace root:
+## Privacy boundary
+
+The default provider intentionally omits motherboard/product serial numbers, UUIDs, asset tags, persistent device IDs, PCI bus addresses, network interface names, IP/MAC addresses, process data, user accounts, host names and disk mount points.
+
+The information is still machine-specific. Applications should obtain consent before transmitting snapshots off-device.
+
+## CLI use
+
+Run from the workspace root:
 
 ```bash
 cargo run -p daedalus-cli -- hardware
 cargo run -p daedalus-cli -- info
 cargo run -p daedalus-cli -- ping
+cargo run -p daedalus-cli -- --help
+cargo run -p daedalus-cli -- --version
 ```
 
-The CLI invokes the same runtime engine and host provider used by the daemon. It is intentionally a thin client, not a second hardware-discovery implementation.
+The CLI invokes RuntimeEngine in-process and emits a pretty-printed JSON response. It shares the same default host provider as the daemon.
 
-## Embedded implementation
+## Daemon protocol
 
-Bare-metal firmware should depend on `daedalus-system-info` and implement `SystemInfoProvider` using its HAL/BSP or RTOS APIs.
+```bash
+printf '%s\n' '{"protocolVersion":1,"requestId":"hardware-001","method":"hardware.discover","params":{}}' | cargo run -p daedalus-runtime
+```
 
-The host provider, JSON-over-stdio transport, runtime engine, and CLI use `std`. Compiling the contract crate for a Cortex-M target does not mean the full daemon or workflow runtime runs on that microcontroller.
+The daemon processes newline-delimited JSON. One input line produces one response line. Malformed input returns INVALID_REQUEST and the daemon continues reading subsequent lines. Stdout is reserved for responses; diagnostics use stderr.
 
-The initial CI job cross-checks only the contract crate for `thumbv7em-none-eabihf`. Hardware-specific providers and runtime profiles require tests on actual boards.
+## Embedded provider implementation
+
+Embedded firmware can depend on daedalus-system-info and implement SystemInfoProvider using its HAL, BSP or RTOS APIs.
+
+The host provider, runtime engine, JSON protocol, CLI and daemon are std components. This milestone does not provide a complete bare-metal runtime or a provider for any particular microcontroller.
+
+## Test guidance
+
+Run tests from the workspace root:
+
+```bash
+cargo test -p daedalus-system-info
+cargo test -p daedalus-system-discovery -- --test-threads=1
+cargo test -p daedalus-runtime-engine
+cargo test --workspace -- --test-threads=1
+```
+
+Native validation on each intended OS and hardware class remains a later milestone. System inspection tests are best run serially.
 
 ## Planned extensions
 
-GPU and accelerator discovery is deliberately separate from this baseline. A later adapter can report devices, vendor/model, device memory, driver/API availability, and supported compute backends. The public snapshot should continue to use Daedalus-owned types, and fields that cannot be read should remain optional.
+- Native platform test suites.
+- Bare-metal providers and embedded runtime profiles.
+- GPU driver and compute API probing for CUDA, ROCm, Metal, Vulkan and OpenCL.
+- Accelerator identification and workload scheduling.
+- Battery, power, firmware and richer sensor inventory.
