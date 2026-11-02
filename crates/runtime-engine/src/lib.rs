@@ -4,9 +4,7 @@
 //! dependency. New runtime capabilities should be implemented here (or in a
 //! focused runtime crate) and exposed through the versioned protocol.
 
-use daedalus_runtime_protocol::{
-    RuntimeRequest, RuntimeResponse, CURRENT_PROTOCOL_VERSION,
-};
+use daedalus_runtime_protocol::{RuntimeRequest, RuntimeResponse, CURRENT_PROTOCOL_VERSION};
 use serde_json::json;
 
 #[derive(Debug, Default)]
@@ -85,8 +83,7 @@ mod tests {
 
     #[test]
     fn runtime_info_reports_only_implemented_capabilities() {
-        let response =
-            RuntimeEngine::new().dispatch(request(1, "info-1", "runtime.getInfo"));
+        let response = RuntimeEngine::new().dispatch(request(1, "info-1", "runtime.getInfo"));
 
         let result = response.result.expect("runtime info result");
         assert_eq!(result["name"], "Daedalus Runtime");
@@ -107,8 +104,7 @@ mod tests {
 
     #[test]
     fn unknown_methods_are_rejected() {
-        let response =
-            RuntimeEngine::new().dispatch(request(1, "unknown-1", "system.info"));
+        let response = RuntimeEngine::new().dispatch(request(1, "unknown-1", "system.info"));
 
         assert!(!response.ok);
         assert_eq!(

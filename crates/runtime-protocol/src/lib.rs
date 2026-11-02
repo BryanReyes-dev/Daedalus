@@ -89,10 +89,8 @@ mod tests {
 
     #[test]
     fn response_omits_the_unused_outcome_field() {
-        let response = RuntimeResponse::success(
-            "abc".to_owned(),
-            serde_json::json!({ "alive": true }),
-        );
+        let response =
+            RuntimeResponse::success("abc".to_owned(), serde_json::json!({ "alive": true }));
 
         let value = serde_json::to_value(response).expect("response should serialize");
 
