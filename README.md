@@ -2,140 +2,142 @@
 
 **Daedalus is an open, local-first AI workflow runtime written in Rust.**
 
-This repository is the public core of the Daedalus ecosystem. It is intended to provide a reusable, headless execution runtime that developers, researchers, enterprises, and government teams can build, inspect, test, and integrate without depending on the proprietary Daedalus desktop application or hosted marketplace.
+This repository is the public core of the Daedalus ecosystem. It is designed to provide a reusable, headless runtime that desktop applications, command-line tools, services, and supported embedded clients can integrate without depending on a particular UI framework or hosted marketplace.
 
-The desktop product and marketplace are maintained separately and remain private.
+The proprietary desktop application and commercial marketplace are maintained separately.
 
 ## Repository boundaries
 
 | Repository | Visibility | Responsibility |
 |---|---|---|
-| **[Daedalus](https://github.com/BryanReyes-dev/Daedalus)** | Public | Rust runtime, public protocol, CLI, system discovery, workflow execution, open package specifications, and developer SDKs |
-| **Daedalus Desktop** | Private | Next.js/React interface, Electron shell, visual workflow editor, application experience, and proprietary client integrations |
-| **[Daedalus Marketplace](https://github.com/BryanReyes-dev/Daedalus-Marketplace)** | Private | Storefront, creator services, artifact distribution, commercial entitlements, payments, and payouts |
+| **[Daedalus](https://github.com/BryanReyes-dev/Daedalus)** | Intended public core | Rust runtime, public protocol, CLI, system discovery, workflow execution, and open specifications |
+| **Daedalus Desktop** | Private | Next.js/React interface, Electron shell, visual workflow editor, application experience, and proprietary integrations |
+| **[Daedalus Marketplace](https://github.com/BryanReyes-dev/Daedalus-Marketplace)** | Private | Storefront, creator services, artifact distribution, entitlements, payments, and payouts |
 
-The public runtime must remain useful on its own. It must not require the desktop app, a marketplace account, a remote licensing server, or a network connection for its core local execution functionality.
+The public runtime must remain useful without the desktop app, a marketplace account, a remote licensing server, or a network connection for ordinary local operations.
 
-## Project goals
+## Current milestone: cross-platform system discovery
 
-### 1. Headless, cross-platform runtime
+The first runtime milestone establishes a hardware/system information boundary that can be used by desktop operating systems and future embedded providers.
 
-The runtime is designed to execute independently of any UI framework. The initial supported desktop operating systems are:
+### Portable, allocation-free contract
 
-- Windows
-- Linux
-- macOS
+`crates/daedalus-system-info` is a `no_std`, no-heap crate. It defines:
 
-The same runtime contracts should be reusable by desktop, CLI, headless, and future embedded clients where the platform supports the required capabilities. Platform support will be documented and tested per target rather than assumed from successful compilation alone.
+- Daedalus-owned platform, processor, memory, and snapshot data types.
+- Fixed-capacity text values so the contract does not require a global allocator.
+- Normalized OS-family and CPU-architecture identifiers.
+- Explicit optional values for information a target cannot provide.
+- The `SystemInfoProvider` trait that host adapters and embedded board-support packages can implement.
 
-### 2. Hardware and system discovery
+This is the portable contract. It does not access hardware by itself.
 
-The runtime should expose a structured, privacy-conscious description of the host machine so higher-level applications can make informed decisions about model and workflow execution.
+### Host operating-system provider
 
-The initial discovery milestone targets:
+`crates/daedalus-system-discovery` is the `std` host adapter backed by `sysinfo`.
 
-- Operating system, version, and architecture.
-- CPU model and logical processor count.
-- Total and available system memory where the platform provides it.
-- Explicit capability availability and unsupported/unknown values.
+The first host implementation collects:
 
-GPU discovery, accelerator capabilities, driver details, device memory, and detailed topology will be added through platform-specific adapters after the initial cross-platform baseline is tested.
+- OS family, name, version, and kernel version where available.
+- CPU architecture, model, vendor, logical processor count, and physical core count where available.
+- Total and currently available physical memory in bytes.
 
-System discovery should not silently collect serial numbers, persistent device identifiers, or unrelated personal data.
+The provider retains its `sysinfo::System` instance, refreshes only the CPU metadata list at initialization and memory during discovery, and does not enumerate processes, users, disks, or network interfaces.
 
-### 3. Portable workflow execution
+The `sysinfo` version currently used documents support for Windows, Linux, macOS, Android, iOS, FreeBSD, NetBSD, and Raspberry Pi-class systems. Fields may be unavailable depending on platform, permissions, virtualization, or hardware. Unsupported operations return explicit errors instead of fabricated values.
 
-The long-term runtime will provide:
+### Runtime protocol and CLI
 
-- Portable workflow/DAG definitions and validation.
-- Deterministic workflow state and lifecycle management.
-- Scheduling, cancellation, and resource budgets.
-- Native model loading and inference abstractions.
-- Wasmtime/WASI execution for capability-restricted workflow components.
-- A stable protocol for desktop and headless clients.
+The runtime exposes:
 
-These capabilities are roadmap items until implemented, tested, and documented.
+- `runtime.ping`
+- `runtime.getInfo`
+- `hardware.discover`
 
-### 4. Open package and cryptographic standards
+Run the CLI from the repository root:
 
-Public specifications should make package structure, integrity, and signature verification independently inspectable.
+```bash
+cargo run -p daedalus-cli -- hardware
+cargo run -p daedalus-cli -- info
+cargo run -p daedalus-cli -- ping
+```
 
-The runtime should support standard cryptographic verification against caller-provided trust roots. It must not depend on proprietary marketplace callbacks or secret verification algorithms to validate public package integrity.
+The hardware command returns a versioned JSON response. A client application can request the same information through the runtime protocol/stdio daemon.
 
-Commercial package authorization and key release belong to the private desktop/marketplace integration. The public runtime should expose explicit, documented interfaces for consuming verified or authorized package content without implementing marketplace business logic.
+## Important embedded-platform boundary
 
-A cryptographic library or build feature is not, by itself, evidence of FIPS 140-3 validation. Any FIPS claim must identify the validated cryptographic module, its validated operating environment, configuration, and deployment boundary.
+The `daedalus-system-info` contract is `no_std` and uses fixed-capacity data structures; it can be implemented by bare-metal firmware, an RTOS port, or a board-support package.
+
+The current `daedalus-system-discovery` host adapter, runtime engine, JSON protocol process, CLI, and daemon use `std`. They are not currently a complete bare-metal runtime and are not claimed to run on every microcontroller.
+
+The embedded CI job checks that the portable contract compiles for `thumbv7em-none-eabihf`. A real embedded implementation still needs a target-specific provider and hardware testing.
 
 ## Intended architecture
 
-The initial implementation is deliberately smaller than the complete roadmap.
-
 ```text
-Desktop application / CLI / headless client
+Private desktop / CLI / headless client / future embedded client
+                           |
+                   versioned protocol
+                           |
+                      runtime-ipc
+                           |
+                     runtime-engine
+                       /        \
+             system-discovery   other runtime capabilities
                     |
-            Versioned public protocol
+             system-info contract
                     |
-              runtime-ipc
-                    |
-              runtime-engine
-              /     |      \
-       system-info  workflows  execution
-                    |
-          platform-specific adapters
+       OS adapter / RTOS / board support package
 ```
 
-The runtime must not depend on Next.js, React, Electron, Tauri, or marketplace-specific services. Client applications own presentation and user interaction. The runtime owns host inspection and execution.
+The runtime must not depend on Next.js, React, Electron, Tauri, or marketplace-specific services. Client applications own presentation and user interaction. The runtime owns system inspection and execution.
 
 ## Current implementation status
 
-**The public repository is at the start of its extraction and foundation milestone.**
+This feature branch adds the following initial implementation:
 
-The initial Rust foundation currently exists on a development branch in the private combined repository and has not yet been migrated into this public repository. It provides a versioned JSON request/response protocol, a small command dispatcher, newline-delimited stdio transport, and a standalone daemon. At this point, the implemented runtime methods are limited to `runtime.ping` and `runtime.getInfo`.
+- A no-std, allocation-free system information contract.
+- A `sysinfo` host provider.
+- The `hardware.discover` runtime method.
+- A `daedalus` CLI with `hardware`, `info`, and `ping` commands.
+- Unit tests for portable type normalization, host discovery, runtime dispatch, and protocol handling.
+- CI for native Windows, Linux, and macOS runs plus a no-std embedded-target compile check.
 
-The following are not yet implemented in this public repository:
+These changes have been committed to the feature branch, but they have **not yet been built or tested locally by the maintainer**. The lockfile must be regenerated and committed after pulling the feature branch. Do not treat this branch as a verified release until its local and CI checks pass.
 
-- Cross-platform system and hardware discovery.
-- Workflow DAG execution and scheduling.
-- Native in-process inference.
-- Wasmtime/WASI sandboxing.
-- The `.dea` archive format and packer.
-- Public-key signature verification.
-- Runtime CLI.
-- Platform CI and release artifacts.
+GPU inventory, accelerator enumeration, driver versions, VRAM, workflow scheduling, in-process inference, Wasmtime/WASI sandboxing, the `.dea` archive format, and public-key signature verification are subsequent milestones.
 
-Do not treat roadmap items as completed functionality.
+## Privacy and discovery principles
 
-## Near-term milestone: runtime foundation and system discovery
+- Collect only system information required for capability planning.
+- Do not collect serial numbers, persistent device identifiers, MAC addresses, process lists, or unrelated personal data as part of baseline discovery.
+- Treat unsupported or unavailable fields as absent rather than using fake defaults.
+- Keep OS-specific calls behind providers; public protocol types must not expose third-party library types.
+- Test on native target operating systems. Cross-compilation alone does not prove correct runtime discovery.
+- Keep the portable contract independent of heap allocation, OS APIs, and UI frameworks.
 
-The first public milestone is complete when a developer can:
+## Development
 
-1. Build and test the Rust workspace independently of the desktop application.
-2. Run the daemon headlessly on Windows, Linux, and macOS.
-3. Send a versioned `hardware.discover` request over the public runtime interface.
-4. Receive normalized OS, CPU, architecture, and memory information.
-5. Get explicit unsupported or unavailable results rather than fabricated/default hardware values.
-6. Run automated tests and cross-platform CI for the supported targets.
-7. Read the implementation and reproduce the result using the public documentation.
+Requirements: stable Rust and Cargo. The host adapter currently follows the `sysinfo` crate's Rust 1.95 minimum; embedded contract consumers may choose a separate toolchain target.
 
-GPU inventory and model-specific capability scoring are subsequent milestones.
+Useful commands:
 
-## Development principles
+```bash
+cargo fmt --all -- --check
+cargo check --workspace
+cargo test --workspace
+cargo check -p daedalus-system-info --target thumbv7em-none-eabihf
+```
 
-- **Rust owns execution and system inspection.** UI frameworks display results; they do not implement runtime behavior.
-- **Keep host-specific code behind adapters.** Public data models and protocol methods should not expose Windows, macOS, Linux, Electron, or Tauri implementation types.
-- **Prefer explicit capability reporting.** Unknown, unavailable, unsupported, and detected are distinct states.
-- **Minimize collection.** Discover resources required for execution, not personal or persistent device identity.
-- **Test on real target operating systems.** Cross-compiling is useful, but it does not replace runtime tests on each OS.
-- **Keep the core offline-capable.** Network-dependent commercial authorization must not be a prerequisite for ordinary local runtime operation.
-- **Be precise about security claims.** Public source enables inspection; it does not automatically prove the system secure, certified, or compliant.
+After the new dependencies are resolved, commit the updated `Cargo.lock` so the workspace has a reproducible dependency graph.
 
 ## Licensing and contributions
 
-The intended public licensing model is Apache License 2.0 with Developer Certificate of Origin (DCO) sign-offs. The repository must include the corresponding license and contribution instructions before accepting external contributions. Until those files are present, do not assume that this README alone grants a license.
+The intended public licensing model is Apache License 2.0 with Developer Certificate of Origin (DCO) sign-offs. The repository still needs its actual Apache 2.0 license text and DCO contribution instructions installed and reviewed before it is made public or accepts external contributions. The README alone does not grant a license.
 
 ## Related private products
 
 - **Daedalus Desktop:** proprietary desktop application that consumes the public runtime.
 - **Daedalus Marketplace:** proprietary hosted storefront, creator, licensing, payment, and distribution services.
 
-The public runtime is not the private desktop application and does not contain its UI, commercial storefront, marketplace database, payment system, or marketplace secrets.
+The public runtime does not contain the private desktop UI, commercial storefront, marketplace database, payment system, or marketplace signing secrets.
