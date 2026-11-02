@@ -191,7 +191,7 @@ fn motherboard_info() -> Option<MotherboardInfo> {
 fn map_sysinfo_error(error: SysinfoError) -> DiscoveryError {
     match error {
         SysinfoError::Unsupported => DiscoveryError::UnsupportedPlatform,
-        SysinfoError::Io(_) | SysinfoError::Other(_) => DiscoveryError::InitializationFailed,
+        _ => DiscoveryError::InitializationFailed,
     }
 }
 
