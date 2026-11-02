@@ -52,7 +52,7 @@ Do not change those statuses without new observed evidence.
 
 ## Repository and licensing state
 
-The repository is currently private. The checked-in LICENSE is proprietary / All Rights Reserved. Apache-2.0 plus DCO has been discussed as a possible public-release model, but it has not been applied. Do not claim this code is open source, publicly distributable, Apache-licensed, or contribution-ready until the owner explicitly completes the licensing and publication work.
+The repository is publicly visible on GitHub. The checked-in LICENSE remains proprietary / All Rights Reserved. Apache-2.0 plus DCO has been discussed as a possible licensing model, but it has not been applied. Do not claim this code is open source, permissively licensed, or freely redistributable. Public visibility does not grant reuse rights.
 
 Daedalus Desktop and Daedalus Marketplace remain separate private product areas. Keep UI and commercial marketplace logic outside this runtime workspace.
 
