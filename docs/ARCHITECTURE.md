@@ -2,129 +2,94 @@
 
 ## Purpose
 
-Daedalus is a headless Rust runtime. It must not depend on a desktop UI framework, web frontend, marketplace service, or commercial account system for ordinary local operation.
+Daedalus is a headless Rust runtime. It must not depend on a desktop UI framework, web frontend, marketplace service or commercial account system for ordinary local operation.
 
-The public runtime is intended to be consumed by independent desktop, CLI, headless, and future embedded clients.
+The public runtime is intended to be consumed by independent desktop, CLI, headless and future embedded clients.
 
-## Current workspace
+## Workspace
 
 | Path | Responsibility | Runtime model |
 |---|---|---|
-| `crates/runtime-protocol` | Versioned request/response data structures | `std` today |
-| `crates/runtime-engine` | Host-side command dispatch and capability orchestration | `std` |
-| `crates/runtime-ipc` | Newline-delimited JSON over stdin/stdout | `std` |
-| `crates/daedalus-system-info` | Portable system data model and provider trait | `no_std`, no heap |
-| `crates/daedalus-system-discovery` | Host OS provider backed by sysinfo | `std` |
-| `apps/runtime-daemon` | Standalone JSON-over-stdio daemon | `std` |
-| `apps/daedalus-cli` | Human-invoked runtime inspection commands | `std` |
+| crates/runtime-protocol | Versioned request/response data structures | std today |
+| crates/runtime-engine | Command dispatch and provider orchestration | std |
+| crates/runtime-ipc | Newline-delimited JSON over stdin/stdout | std |
+| crates/daedalus-system-info | Portable system data model and provider trait | no_std, no heap |
+| crates/daedalus-system-discovery | Host OS provider backed by sysinfo | std |
+| apps/runtime-daemon | Standalone JSON-over-stdio daemon | std |
+| apps/daedalus-cli | In-process command-line inspector | std |
 
-The current protocol methods are:
-- `runtime.ping`
-- `runtime.getInfo`
-- `hardware.discover`
-
-Workflow execution, inference, Wasmtime/WASI sandboxing, package parsing, cryptographic verification, and GPU inventory are not implemented by this milestone.
+Implemented protocol methods are runtime.ping, runtime.getInfo and hardware.discover.
 
 ## Dependency direction
 
 ```text
-runtime-daemon / daedalus-cli
-             |
-        runtime-ipc (daemon only)
-             |
-        runtime-engine
-          /       \
-system-discovery  runtime-protocol
-       |
-system-info contract
+runtime-daemon -- runtime-ipc -- runtime-engine
+                                     |
+                             system-discovery
+                                     |
+                              system-info
+daedalus-cli ------------------------/
 ```
 
-The runtime engine depends on the provider interface, not directly on operating-system calls. The default desktop/server provider is `SysinfoProvider`; tests and alternate targets can inject another `SystemInfoProvider`.
+The runtime engine depends on the provider interface, not directly on operating-system calls. The default host provider is SysinfoProvider. Tests and alternate targets can inject another SystemInfoProvider.
 
-## Portable system information contract
+## Portable contract
 
-`daedalus-system-info` is the portability boundary:
+daedalus-system-info is no_std and uses fixed-capacity heapless strings and vectors. It contains normalized fixed-width types, optional readings and the SystemInfoProvider trait. It performs no hardware access and requires no allocator.
 
-- `#![no_std]`.
-- No dynamic memory allocation.
-- Fixed-capacity `heapless::String` values for bounded text.
-- Numeric resource values use fixed-width integer types.
-- Unknown or unavailable values are represented by `Option`.
-- The provider trait reports a normalized `SystemSnapshot`.
+The contract includes platform, CPU, RAM/swap, product and motherboard identity, storage, GPU and thermal structures. Provider implementations can populate only the fields their target can actually read.
 
-The crate performs no hardware access. Embedded firmware, RTOS integrations, and board-support packages implement `SystemInfoProvider` using the APIs available on their own target.
+## Host discovery adapter
 
-This separates a portable data contract from hardware-specific acquisition. A microcontroller implementation can return only the measurements it can actually obtain.
+daedalus-system-discovery is a std adapter backed by sysinfo 0.40.x.
 
-## Host system discovery
+The host provider:
+1. Initializes and retains one System instance.
+2. Refreshes CPU frequency and CPU topology data.
+3. Refreshes RAM and swap information.
+4. Enumerates storage entries and capacity data without returning mount paths.
+5. Queries GPU inventory where that API is supported.
+6. Queries exposed thermal components.
+7. Reads product and motherboard model metadata without serial numbers or asset tags.
+8. Converts all readings into Daedalus-owned data types.
 
-`daedalus-system-discovery` is a `std` adapter using `sysinfo` 0.40.x.
+It does not request process or user lists, host names, networks, MAC addresses, persistent device identifiers, PCI addresses or disk mount points.
 
-The provider:
-1. Initializes one `sysinfo::System` instance lazily.
-2. Enumerates CPU identity/topology once.
-3. Refreshes RAM information when discovery is requested.
-4. Normalizes the result into Daedalus-owned structures.
-5. Reports unavailable values as absent and unsupported platforms as explicit errors.
+The upstream sysinfo host support list includes Windows, Linux, macOS, Android, iOS, FreeBSD, NetBSD and Raspberry Pi-class Linux. GPU inventory has narrower support: Windows, Linux and macOS. Product/motherboard and thermal APIs also have platform gaps. VMs, containers, sandboxed applications and permissions can limit the values exposed by the host.
 
-It must not enumerate processes, users, network interfaces, or disks as part of baseline hardware discovery.
+## Runtime hardware method
 
-The initial host adapter is intended for Windows, Linux, and macOS and can also use other platforms supported by the selected `sysinfo` release. Actual runtime support must be established by native CI and device tests. Virtual machines and containers may report guest-visible rather than physical-host resource information.
+hardware.discover accepts an empty params object in protocol version 1. The result includes schemaVersion, status, platform, processor, memory, product, motherboard, storageDevices, gpus and thermalSensors.
 
-## Runtime API
+status is complete if baseline OS label, architecture label, logical processor count and total memory are present; otherwise it is partial. Missing scalar fields are JSON null. Optional GPU and thermal arrays use null when the category is unavailable and [] when the query ran but returned no entries.
 
-The `hardware.discover` request takes an empty parameter object in protocol version 1 and returns:
+The snapshot schema has its own schemaVersion. The JSON request/response envelope remains protocol version 1.
 
-- `schemaVersion`
-- `status` (`complete` or `partial`)
-- `platform`: OS family/name/version, kernel version, and normalized/raw architecture
-- `processor`: model, vendor, logical processor count, physical core count
-- `memory`: total and available bytes
+## CLI and daemon
 
-Fields that cannot be read are represented as JSON `null`; the runtime must not substitute invented values. The response is generated from Daedalus-owned types rather than serializing `sysinfo` types directly.
+The daedalus CLI calls RuntimeEngine in-process. It supports hardware, info, ping, help and version switches. Runtime commands output pretty-printed JSON.
 
-The addition of this method does not alter the version 1 request/response envelope.
+The daedalus-runtime daemon uses runtime-ipc to process newline-delimited JSON on stdin and write one response line per request to stdout. Diagnostics go to stderr.
 
-## Embedded scope and limitations
+## Embedded scope
 
-The portable `daedalus-system-info` crate is designed to compile without `std` or a heap allocator. The current host provider, runtime engine, JSON protocol, CLI, and daemon are still `std` components.
+The portable system-info crate can be compiled for no_std targets. The host adapter, runtime engine, JSON protocol, CLI and daemon are std components. This milestone does not claim full bare-metal runtime support.
 
-Consequently, this milestone does **not** claim that the complete daemon/runtime can run on bare-metal microcontrollers. Future embedded work requires:
-- A target-specific `SystemInfoProvider` implementation using its HAL/BSP/RTOS.
-- A suitable transport or in-process integration for that target.
-- An execution/runtime profile appropriate to its memory, timing, and peripheral constraints.
-- Tests on the actual development board.
+Future embedded work requires a target-specific provider using its HAL/BSP/RTOS, an appropriate transport or in-process profile, and tests on the actual board.
 
-The initial CI target checks only that the portable data/trait crate compiles for `thumbv7em-none-eabihf`; this is a compile check, not proof of a complete embedded runtime.
+## Validation status
 
-## Cross-platform validation
-
-Native CI should run formatting, workspace compilation, and tests on:
-- Windows
-- Linux
-- macOS
-
-The no-std contract should additionally be checked against at least one bare-metal target. A successful cross-compilation does not replace runtime testing on a real target device.
+Unit tests are maintained within the portable contract, host adapter, protocol, runtime engine and transport crates. Native testing on each intended OS and device class is deferred. GitHub Actions and per-platform automation are also deferred. Cross-compilation alone does not establish working device discovery.
 
 ## Security and privacy
 
-- Keep runtime operation local-first and offline-capable.
-- Write protocol responses to stdout only; diagnostics go to stderr.
-- Bound request sizes and validate all protocol requests before dispatch.
-- Do not collect serial numbers, persistent hardware identifiers, MAC addresses, process lists, or unrelated personal data for ordinary discovery.
+- Keep ordinary runtime operation local-first and offline-capable.
+- Reserve stdout for protocol messages; send diagnostics to stderr.
+- Bound text and device collection sizes.
+- Do not collect serial numbers, product UUIDs, asset tags, persistent hardware IDs, MAC addresses, process lists, user accounts or disk mount paths during normal discovery.
 - Treat caller-provided package bytes and workflow definitions as untrusted input.
 - Do not claim FIPS validation without an identified validated module and deployment boundary.
 
-## Future architecture (not implemented)
+## Not implemented
 
-Potential future crates and capabilities include:
-- `workflow-core`
-- `workflow-engine`
-- `runtime-inference`
-- `runtime-sandbox`
-- `runtime-crypto`
-- `dea-format`
-- A fuller headless CLI and embedded runtime profile
-- Platform-specific GPU and accelerator adapters
-
-Add crates only when concrete functionality and independent testing needs justify them.
+Workflow execution, inference, Wasmtime/WASI sandboxing, package parsing, cryptographic package verification, .dea archives, GPU driver/compute API probing and accelerator scheduling remain future capabilities.
