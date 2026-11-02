@@ -128,13 +128,13 @@ The CLI prints a standard runtime response envelope. For a successful hardware r
 | `memory` | RAM and swap totals, available and used bytes |
 | `product` | Manufacturer/system model/family/version when available |
 | `motherboard` | Board manufacturer/model/version when available |
-| `storageDevices` | Storage kind, filesystem, capacity/free bytes, removable/read-only flags |
+| `storageDevices` | Storage kind, filesystem, capacity/free bytes, removable/read-only flags; `null` when storage enumeration is unsupported |
 | `gpus` | GPU inventory, or `null` when the host provider cannot query it |
 | `thermalSensors` | Temperature sensor readings, or `null` when sensor enumeration is unavailable |
 
 Memory and storage sizes are byte counts. CPU frequency is MHz. GPU utilization is a percentage. Temperatures are degrees Celsius.
 
-Unavailable scalar values are JSON null. Optional device arrays distinguish null (category could not be queried) from an empty array (query succeeded but returned no devices). The portable contract retains up to 16 storage entries, 8 GPUs and 32 thermal sensors per snapshot.
+Unavailable scalar values are JSON null. Optional device arrays (`storageDevices`, `gpus`, and `thermalSensors`) distinguish `null` (category could not be queried) from an empty array (query succeeded but returned no devices). The portable contract retains up to 16 storage entries, 8 GPUs and 32 thermal sensors per snapshot.
 
 The complete status refers only to baseline platform/CPU/RAM fields. It does not guarantee that motherboard, GPU, storage, or sensor details are all populated.
 
