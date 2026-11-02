@@ -90,7 +90,7 @@ impl SystemInfoProvider for SysinfoProvider {
             let mut devices: FixedVec<StorageDeviceInfo, MAX_STORAGE_DEVICES> =
                 FixedVec::new();
 
-            for disk in disks.list() {
+            for disk in disks {
                 let kind = match disk.kind() {
                     DiskKind::HDD => StorageKind::Hdd,
                     DiskKind::SSD => StorageKind::Ssd,
