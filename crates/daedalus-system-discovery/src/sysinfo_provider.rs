@@ -101,9 +101,7 @@ fn map_sysinfo_error(error: SysinfoError) -> DiscoveryError {
     }
 }
 
-fn optional_sysinfo_text(
-    result: Result<String, SysinfoError>,
-) -> Option<FixedText<TEXT_CAPACITY>> {
+fn optional_sysinfo_text(result: Result<String, SysinfoError>) -> Option<FixedText<TEXT_CAPACITY>> {
     match result {
         Ok(value) => non_empty_text(&value),
         Err(SysinfoError::Unsupported | SysinfoError::Io(_) | SysinfoError::Other(_)) => None,
@@ -197,7 +195,9 @@ mod tests {
     fn provider_reuses_its_system_instance() {
         let mut provider = SysinfoProvider::new();
         provider.discover().expect("first discovery should succeed");
-        provider.discover().expect("second discovery should succeed");
+        provider
+            .discover()
+            .expect("second discovery should succeed");
         assert!(provider.system.is_some());
     }
 

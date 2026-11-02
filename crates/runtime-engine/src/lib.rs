@@ -4,9 +4,7 @@
 //! dependency. Runtime capabilities are exposed through the versioned
 //! protocol and implemented behind provider interfaces.
 
-use daedalus_runtime_protocol::{
-    RuntimeRequest, RuntimeResponse, CURRENT_PROTOCOL_VERSION,
-};
+use daedalus_runtime_protocol::{RuntimeRequest, RuntimeResponse, CURRENT_PROTOCOL_VERSION};
 use daedalus_system_discovery::SysinfoProvider;
 use daedalus_system_info::{SystemInfoProvider, SystemSnapshot};
 use serde_json::{json, Value};
@@ -72,15 +70,10 @@ impl RuntimeEngine {
                 }),
             ),
             "hardware.discover" => match self.system_info_provider.discover() {
-                Ok(snapshot) => RuntimeResponse::success(
-                    request_id,
-                    system_snapshot_to_value(&snapshot),
-                ),
-                Err(error) => RuntimeResponse::failure(
-                    request_id,
-                    error.code(),
-                    error.message(),
-                ),
+                Ok(snapshot) => {
+                    RuntimeResponse::success(request_id, system_snapshot_to_value(&snapshot))
+                }
+                Err(error) => RuntimeResponse::failure(request_id, error.code(), error.message()),
             },
             method => RuntimeResponse::failure(
                 request_id,

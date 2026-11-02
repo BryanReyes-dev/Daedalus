@@ -81,18 +81,14 @@ impl Architecture {
             || name.eq_ignore_ascii_case("i686")
         {
             Self::X86
-        } else if name.eq_ignore_ascii_case("x86_64")
-            || name.eq_ignore_ascii_case("amd64")
-        {
+        } else if name.eq_ignore_ascii_case("x86_64") || name.eq_ignore_ascii_case("amd64") {
             Self::X86_64
         } else if name.eq_ignore_ascii_case("arm")
             || name.eq_ignore_ascii_case("armv6")
             || name.eq_ignore_ascii_case("armv7")
         {
             Self::Arm
-        } else if name.eq_ignore_ascii_case("aarch64")
-            || name.eq_ignore_ascii_case("arm64")
-        {
+        } else if name.eq_ignore_ascii_case("aarch64") || name.eq_ignore_ascii_case("arm64") {
             Self::Aarch64
         } else if name.eq_ignore_ascii_case("riscv32") {
             Self::RiscV32
@@ -197,9 +193,7 @@ impl DiscoveryError {
             Self::InitializationFailed => {
                 "The system-information provider could not be initialized."
             }
-            Self::DataUnavailable => {
-                "The system-information provider could not read system data."
-            }
+            Self::DataUnavailable => "The system-information provider could not read system data.",
         }
     }
 }
