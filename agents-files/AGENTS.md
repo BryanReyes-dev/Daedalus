@@ -18,7 +18,7 @@ Daedalus is a local-first Rust runtime project. The current implementation is a 
 - Keep changes scoped to the requested task. Explain protocol, data-model, security, licensing, or compatibility changes.
 - Do not claim a build, test, platform, CI run, release, deployment, or hardware result unless it was actually observed. Mark user-reported test evidence as user-reported.
 - Do not silently add GitHub Actions or other hosted CI. Cross-platform workflows are a planned follow-up and require an explicit task.
-- Do not change repository visibility or licensing as part of ordinary implementation work. The repository is currently private and its existing LICENSE is proprietary; a future open-source release requires a separate authorized licensing and publication task.
+- Do not change repository visibility or licensing as part of ordinary implementation work. The repository is publicly visible, but its existing LICENSE is proprietary / All Rights Reserved. A license change or redistribution grant requires a separate, explicit authorization and licensing task.
 - Do not add secrets, API keys, machine identifiers, private hardware identifiers, local environment files, or model weights to the repository.
 
 ## Rust workspace and crate boundaries
