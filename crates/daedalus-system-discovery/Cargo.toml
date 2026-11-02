@@ -6,4 +6,4 @@ publish.workspace = true
 
 [dependencies]
 daedalus-system-info = { path = "../daedalus-system-info" }
-sysinfo = "0.40.1"
+sysinfo = { version = "0.40.1", features = ["gpu"] }
