@@ -5,7 +5,7 @@ edition.workspace = true
 publish.workspace = true
 
 [[bin]]
-name = "daedalus"
+name = "dae"
 path = "src/main.rs"
 
 [dependencies]

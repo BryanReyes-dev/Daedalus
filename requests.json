@@ -1,0 +1,3 @@
+{"protocolVersion":1,"requestId":"one","method":"runtime.ping","params":{}}
+{"protocolVersion":1,"requestId":"two","method":"runtime.getInfo","params":{}}
+{"protocolVersion":1,"requestId":"three","method":"hardware.discover","params":{}}

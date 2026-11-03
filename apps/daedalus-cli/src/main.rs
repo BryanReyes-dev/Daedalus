@@ -24,20 +24,20 @@ fn main() -> ExitCode {
             return ExitCode::SUCCESS;
         }
         "-V" | "--version" => {
-            println!("daedalus {VERSION}");
+            println!("dae {VERSION}");
             return ExitCode::SUCCESS;
         }
         "hardware" | "info" | "ping" => {}
         _ => {
             eprintln!("Unknown command: {command}");
-            eprintln!("Run daedalus help for usage.");
+            eprintln!("Run dae help for usage.");
             return ExitCode::from(2);
         }
     }
 
     if let Some(unexpected) = args.next() {
         eprintln!("Unexpected argument: {unexpected}");
-        eprintln!("Run daedalus help for usage.");
+        eprintln!("Run dae help for usage.");
         return ExitCode::from(2);
     }
 
@@ -77,7 +77,7 @@ fn print_help() {
     println!(
         "Daedalus CLI {VERSION}\n\
          \n\
-         Usage: daedalus <COMMAND>\n\
+         Usage: dae <COMMAND>\n\
          \n\
          Commands:\n\
            hardware   Discover platform, CPU, memory, storage, GPU and sensors\n\
