@@ -12,12 +12,13 @@ use serde_json::json;
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn main() -> ExitCode {
+    // Parse command-line arguments
     let mut args = std::env::args().skip(1);
     let Some(command) = args.next() else {
         print_help();
         return ExitCode::SUCCESS;
     };
-
+    // Validate command
     match command.as_str() {
         "help" | "-h" | "--help" => {
             print_help();
@@ -40,7 +41,7 @@ fn main() -> ExitCode {
         eprintln!("Run dae help for usage.");
         return ExitCode::from(2);
     }
-
+    // Dispatch command to the runtime engine
     let method = match command.as_str() {
         "hardware" => "hardware.discover",
         "info" => "runtime.getInfo",
@@ -58,6 +59,7 @@ fn main() -> ExitCode {
     let mut engine = RuntimeEngine::new();
     let response = engine.dispatch(request);
 
+    // Pretty-print the response as JSON
     match serde_json::to_string_pretty(&response) {
         Ok(output) => println!("{output}"),
         Err(error) => {
