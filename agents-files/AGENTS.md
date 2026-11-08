@@ -18,7 +18,10 @@ Daedalus is a local-first Rust runtime project. The current implementation is a 
 - Keep changes scoped to the requested task. Explain protocol, data-model, security, licensing, or compatibility changes.
 - Do not claim a build, test, platform, CI run, release, deployment, or hardware result unless it was actually observed. Mark user-reported test evidence as user-reported.
 - Do not silently add GitHub Actions or other hosted CI. Cross-platform workflows are a planned follow-up and require an explicit task.
-- Do not change repository visibility or licensing as part of ordinary implementation work. The repository is publicly visible, but its existing LICENSE is proprietary / All Rights Reserved. A license change or redistribution grant requires a separate, explicit authorization and licensing task.
+- This repository's project-authored code and documentation are licensed under Apache-2.0. Do not replace, weaken, or contradict that license as part of ordinary implementation work. Keep `LICENSE`, `NOTICE`, Cargo package metadata, README, and contribution policy aligned.
+- Do not copy proprietary Desktop or Marketplace code into this public runtime repository. Keep UI, Electron-specific product code, Marketplace business logic, payment processing, and hosted creator services in their separate repositories.
+- Treat third-party code, model weights, datasets, fonts, images, and other assets according to their own licenses; Apache-2.0 for this repository does not relicense them.
+- Public runtime contributions follow `CONTRIBUTING.md` and DCO sign-off. A DCO does not transfer copyright or grant exclusive relicensing rights; do not promise dual licensing or proprietary relicensing of third-party contributions without a separate written agreement.
 - Do not add secrets, API keys, machine identifiers, private hardware identifiers, local environment files, or model weights to the repository.
 
 ## Rust workspace and crate boundaries
