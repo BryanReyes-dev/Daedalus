@@ -76,3 +76,12 @@ Daedalus Desktop and Daedalus Marketplace remain separate private product areas.
 - Update tests and docs with protocol/data-contract changes.
 - Use actual test output as evidence; do not infer platform verification from dependency support or a successful compile.
 - Keep GitHub Actions deferred unless requested.
+
+
+## Licensing boundary — confirmed 2026-11-08
+
+- This public Rust runtime repository is licensed under Apache-2.0; see `LICENSE`, `NOTICE`, and `docs/LICENSING.md`.
+- The separate Daedalus Desktop and Daedalus Marketplace repositories are proprietary products. Do not move their UI, Electron, payment, or marketplace service implementation into this repository.
+- Apache-2.0 allows commercial use and redistribution of this runtime, subject to its conditions. It does not grant Daedalus trademark rights or rights to separate proprietary products.
+- Contributors follow `CONTRIBUTING.md`. DCO sign-off is not a copyright assignment or exclusive relicensing grant.
+- Keep third-party dependency, model, dataset, and package licensing separate from the repository's license.
