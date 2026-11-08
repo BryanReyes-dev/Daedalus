@@ -110,7 +110,7 @@ The current `sysinfo` dependency requires Rust 1.95 or newer.
 | Daedalus Desktop | Separate private desktop experience, Electron shell, visual workflow UI, and application integrations |
 | Daedalus Marketplace | Separate private storefront, creator services, artifact distribution, commercial entitlements, payments, and payouts |
 
-The repository is publicly visible, but it remains under its checked-in proprietary license. Public visibility does not change the licensing terms. See [Licensing and Release Status](#licensing-and-release-status).
+The Daedalus Rust runtime repository is licensed under Apache License 2.0. The separate Desktop and Marketplace products have their own proprietary licensing terms. See [License and commercial model](#license-and-commercial-model).
 
 ## Architecture
 
@@ -608,10 +608,33 @@ The repository uses the same `agents-files/` organization as the Evergreen Estat
 
 The context file is intentionally short-lived. Update it when new tests, platform validation, or implementation milestones are completed. Durable architecture decisions belong in `agents-files/ARCHITECTURE.md`.
 
-## Licensing and Release Status
+## License and commercial model
 
-This repository is publicly visible on GitHub, but public visibility does not make it open source or grant redistribution rights. The checked-in `LICENSE` currently states All Rights Reserved and describes the software as proprietary and confidential. Apache License 2.0 and DCO contribution terms have not been applied.
+The Daedalus Rust runtime source code and documentation in this repository are licensed under the **Apache License, Version 2.0**. The complete license text is in [LICENSE](./LICENSE), and attribution information is in [NOTICE](./NOTICE).
 
-Do not describe this repository as Apache-licensed or freely redistributable unless the owner deliberately changes the checked-in license, adds the corresponding contribution terms and notices, and reviews the repository's contents for publication. The README itself does not grant a license.
+Apache-2.0 permits commercial use, modification, redistribution, and distribution of derivative works, subject to its conditions. It does not require a company using the runtime to publish its own application source code, and it does not require royalties for permission to use this repository's Apache-licensed code. You must preserve the applicable license, copyright, patent, and attribution notices and identify modified files as required by the license.
 
-The separate Daedalus Desktop and Daedalus Marketplace products remain private.
+### Daedalus product boundaries
+
+| Product | Repository | Licensing boundary |
+|---|---|---|
+| Rust runtime foundation, portable contracts, host discovery, protocol, CLI, and daemon | [Daedalus](https://github.com/BryanReyes-dev/Daedalus) | Apache-2.0 |
+| Desktop application, Electron host, UI, application integrations, and product experience | [Daedalus-Runtime](https://github.com/BryanReyes-dev/Daedalus-Runtime) | Proprietary, except for any Rust runtime subtrees explicitly licensed under Apache-2.0 |
+| Marketplace service, storefront, creator and distribution services | [Daedalus-Marketplace](https://github.com/BryanReyes-dev/Daedalus-Marketplace) | Proprietary |
+| Third-party libraries, model weights, and separately published packages | Their respective owners | Their own licenses and terms |
+
+The Apache license applies to this repository. It does not grant rights to the Daedalus name, logo, trademarks, or separately maintained proprietary products. Each package, model, workflow, and other marketplace artifact must carry its own license; the Marketplace's proprietary service license does not override an artifact's license.
+
+### Commercial and government use
+
+You may use, modify, integrate, and redistribute the Apache-licensed runtime in commercial products, including products sold to public-sector customers, as long as you comply with Apache-2.0 and any other applicable third-party terms. Bryan may separately charge for proprietary Desktop features, Marketplace services, custom engineering, deployment, integration, support, maintenance, and contract-specific deliverables. Those services are separate from the public license grant for this runtime.
+
+A government contract can impose additional requirements concerning software delivery, data rights, security, documentation, and acceptance. Do not assume this README or Apache-2.0 determines the rights in every contract deliverable. Identify pre-existing software and third-party components, maintain relevant development and dependency records, and obtain contract-specific legal review before agreeing to federal, state, or defense procurement terms. This project makes no blanket claim of FIPS validation or government security certification.
+
+### Contributions
+
+Contributions to this repository are accepted under the Apache-2.0 contribution policy described in [CONTRIBUTING.md](./CONTRIBUTING.md). Contributors retain ownership of their original contributions; the DCO sign-off records their certification and does not transfer copyright or grant exclusive relicensing rights. A separate written agreement is required before any contribution is accepted on terms that differ from Apache-2.0.
+
+### Third-party components
+
+Third-party dependencies and separately licensed materials remain subject to their own license terms. See the dependency manifests and upstream notices when assessing a distribution. The Apache-2.0 license for this repository does not relicense model weights, datasets, fonts, media, or other externally supplied material.
